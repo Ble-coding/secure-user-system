@@ -94,7 +94,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
                     <NavLink to={item.url} end className={getNavCls}>
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.title}</span>}
@@ -114,7 +114,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {toolItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavCls}>
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.title}</span>}
@@ -134,7 +134,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavCls}>
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.title}</span>}
@@ -171,8 +171,6 @@ export function AppSidebar() {
           {!collapsed && <span className="ml-2">Déconnexion</span>}
         </Button>
       </SidebarFooter>
-
-      <SidebarTrigger className="absolute -right-4 top-6 bg-sidebar border border-sidebar-border shadow-sm" />
     </Sidebar>
   )
 }

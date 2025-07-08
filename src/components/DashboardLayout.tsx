@@ -1,3 +1,4 @@
+
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { Bell, Search } from "lucide-react"
@@ -20,7 +21,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <header className="h-16 bg-card border-b border-border shadow-sm">
             <div className="flex items-center justify-between h-full px-6">
               <div className="flex items-center gap-4">
-                <SidebarTrigger className="lg:hidden" />
+                <SidebarTrigger />
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input 

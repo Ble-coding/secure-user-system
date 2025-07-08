@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,10 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
 import Agents from "./pages/Agents";
+import Parents from "./pages/Parents";
+import Recuperators from "./pages/Recuperators";
+import Children from "./pages/Children";
+import Entries from "./pages/Entries";
 import { DashboardLayout } from "./components/DashboardLayout";
 
 const queryClient = new QueryClient();
@@ -27,6 +32,26 @@ const App = () => (
           <Route path="/agents" element={
             <DashboardLayout>
               <Agents />
+            </DashboardLayout>
+          } />
+          <Route path="/parents" element={
+            <DashboardLayout>
+              <Parents />
+            </DashboardLayout>
+          } />
+          <Route path="/recuperators" element={
+            <DashboardLayout>
+              <Recuperators />
+            </DashboardLayout>
+          } />
+          <Route path="/children" element={
+            <DashboardLayout>
+              <Children />
+            </DashboardLayout>
+          } />
+          <Route path="/entries" element={
+            <DashboardLayout>
+              <Entries />
             </DashboardLayout>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
