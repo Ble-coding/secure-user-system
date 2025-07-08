@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   Users2, 
   Plus, 
@@ -35,14 +42,41 @@ import {
   MapPin
 } from "lucide-react"
 import { parentService, Parent } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { ParentModal } from "@/components/modals/ParentModal"
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Parents() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    mode: "create" | "edit" | "view"
+    parent?: Parent
+  }>({ isOpen: false, mode: "create" })
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    parent?: Parent
+  }>({ isOpen: false })
+
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   const { data: parents = [], isLoading, error } = useQuery({
     queryKey: ['parents'],
     queryFn: parentService.getAll,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: parentService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parents'] })
+      toast({ title: "Parent supprimé avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" })
+    },
   })
 
   const getStatusBadge = (status: string) => {
@@ -51,11 +85,34 @@ export default function Parents() {
       : <Badge variant="secondary">Inactif</Badge>
   }
 
-  const filteredParents = parents.filter((parent: Parent) =>
-    parent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    parent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    parent.phone.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredParents = parents.filter((parent: Parent) => {
+    const matchesSearch = parent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      parent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      parent.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === "all" || parent.status === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
+
+  const handleEdit = (parent: Parent) => {
+    setModalState({ isOpen: true, mode: "edit", parent })
+  }
+
+  const handleView = (parent: Parent) => {
+    setModalState({ isOpen: true, mode: "view", parent })
+  }
+
+  const handleDelete = (parent: Parent) => {
+    setDeleteModal({ isOpen: true, parent })
+  }
+
+  const confirmDelete = () => {
+    if (deleteModal.parent) {
+      deleteMutation.mutate(deleteModal.parent.id)
+      setDeleteModal({ isOpen: false })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -81,7 +138,10 @@ export default function Parents() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des Parents</h1>
           <p className="text-muted-foreground">Gérez tous les parents et leurs enfants</p>
         </div>
-        <Button className="bg-gradient-primary">
+        <Button 
+          className="bg-gradient-primary"
+          onClick={() => setModalState({ isOpen: true, mode: "create" })}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Ajouter un parent
         </Button>
@@ -163,10 +223,17 @@ export default function Parents() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filtres
-            </Button>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="Actif">Actif</SelectItem>
+                <SelectItem value="Inactif">Inactif</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="rounded-md border border-border">
@@ -215,16 +282,16 @@ export default function Parents() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover border-border">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleView(parent)}>
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(parent)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive">
+                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(parent)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Supprimer
                           </DropdownMenuItem>
@@ -244,6 +311,23 @@ export default function Parents() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <ParentModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, mode: "create" })}
+        parent={modalState.parent}
+        mode={modalState.mode}
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Supprimer ce parent"
+        description="Êtes-vous sûr de vouloir supprimer ce parent ? Cette action est irréversible."
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

@@ -11,7 +11,8 @@ import {
   Settings, 
   Shield,
   LogOut,
-  Home
+  Home,
+  MessageSquare
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -43,6 +44,7 @@ const mainItems = [
 
 const toolItems = [
   { title: "Journal des Entrées", url: "/entries", icon: Calendar },
+  { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "QR Code", url: "/qrcode", icon: QrCode },
 ]
 

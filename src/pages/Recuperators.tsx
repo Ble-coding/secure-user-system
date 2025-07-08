@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   Heart, 
   Plus, 
@@ -35,14 +42,41 @@ import {
   QrCode
 } from "lucide-react"
 import { recuperatorService, Recuperator } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { RecuperatorModal } from "@/components/modals/RecuperatorModal"
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Recuperators() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    mode: "create" | "edit" | "view"
+    recuperator?: Recuperator
+  }>({ isOpen: false, mode: "create" })
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    recuperator?: Recuperator
+  }>({ isOpen: false })
+
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   const { data: recuperators = [], isLoading, error } = useQuery({
     queryKey: ['recuperators'],
     queryFn: recuperatorService.getAll,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: recuperatorService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recuperators'] })
+      toast({ title: "Récupérateur supprimé avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" })
+    },
   })
 
   const getStatusBadge = (status: string) => {
@@ -51,11 +85,34 @@ export default function Recuperators() {
       : <Badge variant="secondary">Inactif</Badge>
   }
 
-  const filteredRecuperators = recuperators.filter((recuperator: Recuperator) =>
-    recuperator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    recuperator.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    recuperator.phone.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredRecuperators = recuperators.filter((recuperator: Recuperator) => {
+    const matchesSearch = recuperator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      recuperator.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      recuperator.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === "all" || recuperator.status === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
+
+  const handleEdit = (recuperator: Recuperator) => {
+    setModalState({ isOpen: true, mode: "edit", recuperator })
+  }
+
+  const handleView = (recuperator: Recuperator) => {
+    setModalState({ isOpen: true, mode: "view", recuperator })
+  }
+
+  const handleDelete = (recuperator: Recuperator) => {
+    setDeleteModal({ isOpen: true, recuperator })
+  }
+
+  const confirmDelete = () => {
+    if (deleteModal.recuperator) {
+      deleteMutation.mutate(deleteModal.recuperator.id)
+      setDeleteModal({ isOpen: false })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -81,7 +138,10 @@ export default function Recuperators() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des Récupérateurs</h1>
           <p className="text-muted-foreground">Gérez les personnes autorisées à récupérer les enfants</p>
         </div>
-        <Button className="bg-gradient-primary">
+        <Button 
+          className="bg-gradient-primary"
+          onClick={() => setModalState({ isOpen: true, mode: "create" })}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Ajouter un récupérateur
         </Button>
@@ -163,10 +223,17 @@ export default function Recuperators() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filtres
-            </Button>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="Actif">Actif</SelectItem>
+                <SelectItem value="Inactif">Inactif</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="rounded-md border border-border">
@@ -208,7 +275,7 @@ export default function Recuperators() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover border-border">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleView(recuperator)}>
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
@@ -216,12 +283,12 @@ export default function Recuperators() {
                             <QrCode className="mr-2 h-4 w-4" />
                             Générer QR Code
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(recuperator)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive">
+                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(recuperator)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Supprimer
                           </DropdownMenuItem>
@@ -241,6 +308,23 @@ export default function Recuperators() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <RecuperatorModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, mode: "create" })}
+        recuperator={modalState.recuperator}
+        mode={modalState.mode}
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Supprimer ce récupérateur"
+        description="Êtes-vous sûr de vouloir supprimer ce récupérateur ? Cette action est irréversible."
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }
