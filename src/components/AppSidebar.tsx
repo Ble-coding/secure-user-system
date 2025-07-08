@@ -1,3 +1,4 @@
+
 import { 
   BarChart3, 
   Users, 
@@ -60,20 +61,20 @@ export function AppSidebar() {
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     `transition-colors duration-200 ${isActive 
       ? "bg-primary text-primary-foreground font-medium shadow-sm" 
-      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+      : "hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
     }`
 
   return (
-    <Sidebar className={`${collapsed ? "w-14" : "w-64"} border-r border-border bg-card shadow-card-custom`}>
-      <SidebarHeader className="p-4 border-b border-border">
+    <Sidebar className={`${collapsed ? "w-14" : "w-64"} border-r border-sidebar-border bg-sidebar shadow-card-custom`}>
+      <SidebarHeader className="p-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
               <BarChart3 className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">Admin Panel</h2>
-              <p className="text-xs text-muted-foreground">Système de gestion</p>
+              <h2 className="font-semibold text-sidebar-foreground">Admin Panel</h2>
+              <p className="text-xs text-sidebar-foreground/70">Système de gestion</p>
             </div>
           </div>
         )}
@@ -86,7 +87,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={collapsed ? "sr-only" : "text-sidebar-foreground/70"}>
             Gestion Principale
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -106,7 +107,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={collapsed ? "sr-only" : "text-sidebar-foreground/70"}>
             Outils
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -126,7 +127,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={collapsed ? "sr-only" : "text-sidebar-foreground/70"}>
             Paramètres
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -146,7 +147,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-3 mb-3">
             <Avatar className="w-8 h-8">
@@ -156,22 +157,22 @@ export function AppSidebar() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">Admin User</p>
-              <p className="text-xs text-muted-foreground truncate">admin@example.com</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
+              <p className="text-xs text-sidebar-foreground/70 truncate">admin@example.com</p>
             </div>
           </div>
         )}
         <Button 
           variant="outline" 
           size={collapsed ? "icon" : "sm"} 
-          className="w-full border-border hover:bg-destructive hover:text-destructive-foreground"
+          className="w-full border-sidebar-border bg-sidebar-accent hover:bg-destructive hover:text-destructive-foreground text-sidebar-foreground"
         >
           <LogOut className="w-4 h-4" />
           {!collapsed && <span className="ml-2">Déconnexion</span>}
         </Button>
       </SidebarFooter>
 
-      <SidebarTrigger className="absolute -right-4 top-6 bg-card border border-border shadow-sm" />
+      <SidebarTrigger className="absolute -right-4 top-6 bg-sidebar border border-sidebar-border shadow-sm" />
     </Sidebar>
   )
 }
