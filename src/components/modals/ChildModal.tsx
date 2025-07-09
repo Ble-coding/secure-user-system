@@ -21,59 +21,59 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { ParentUser, parentService } from "@/lib/api"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Child, childService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-const parentSchema = z.object({
-  nom: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  prenom: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
-  email: z.string().email("Email invalide"),
-  telephone: z.string().min(10, "Numéro de téléphone invalide"),
-  adresse: z.string().min(5, "Adresse requise"),
+const childSchema = z.object({
+  first_name: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
+  last_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  gender: z.string().min(1, "Le genre est requis"),
+  date_of_birth: z.string().min(1, "La date de naissance est requise"),
+  class: z.string().min(1, "La classe est requise"),
 })
 
-type ParentFormData = z.infer<typeof parentSchema>
+type ChildFormData = z.infer<typeof childSchema>
 
-interface ParentModalProps {
+interface ChildModalProps {
   isOpen: boolean
   onClose: () => void
-  parent?: ParentUser
+  child?: Child
   mode: "create" | "edit" | "view"
 }
 
-export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps) {
+export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  const form = useForm<ParentFormData>({
-    resolver: zodResolver(parentSchema),
-    defaultValues: parent ? {
-      nom: parent.nom || "",
-      prenom: parent.prenom || "",
-      email: parent.email || "",
-      telephone: parent.telephone || "",
-      adresse: parent.adresse || "",
+  const form = useForm<ChildFormData>({
+    resolver: zodResolver(childSchema),
+    defaultValues: child ? {
+      first_name: child.first_name || "",
+      last_name: child.last_name || "",
+      gender: child.gender || "",
+      date_of_birth: child.date_of_birth || "",
+      class: child.class || "",
     } : {
-      nom: "",
-      prenom: "",
-      email: "",
-      telephone: "",
-      adresse: "",
+      first_name: "",
+      last_name: "",
+      gender: "",
+      date_of_birth: "",
+      class: "",
     },
   })
 
   const createMutation = useMutation({
-    mutationFn: parentService.create,
+    mutationFn: childService.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents'] })
-      toast({ title: "Parent créé avec succès" })
+      queryClient.invalidateQueries({ queryKey: ['children'] })
+      toast({ title: "Enfant créé avec succès" })
       form.reset()
       onClose()
     },
     onError: (error: any) => {
-      console.error('Error creating parent:', error)
+      console.error('Error creating child:', error)
       toast({ 
         title: "Erreur lors de la création", 
         description: error.message || "Une erreur est survenue",
@@ -83,15 +83,15 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<ParentUser> }) =>
-      parentService.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Child> }) =>
+      childService.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents'] })
-      toast({ title: "Parent modifié avec succès" })
+      queryClient.invalidateQueries({ queryKey: ['children'] })
+      toast({ title: "Enfant modifié avec succès" })
       onClose()
     },
     onError: (error: any) => {
-      console.error('Error updating parent:', error)
+      console.error('Error updating child:', error)
       toast({ 
         title: "Erreur lors de la modification", 
         description: error.message || "Une erreur est survenue",
@@ -100,11 +100,18 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
     },
   })
 
-  const onSubmit = (data: ParentFormData) => {
+  const onSubmit = (data: ChildFormData) => {
+    const submitData = {
+      ...data,
+      parent_id: 1, // Vous devrez ajuster ceci selon votre logique
+      code: `CH-${Date.now()}`, // Génération temporaire du code
+      status: "Présent" as const,
+    };
+
     if (mode === "create") {
-      createMutation.mutate({ ...data, status: "Actif" })
-    } else if (mode === "edit" && parent) {
-      updateMutation.mutate({ id: parent.id, data })
+      createMutation.mutate(submitData)
+    } else if (mode === "edit" && child) {
+      updateMutation.mutate({ id: child.id, data: submitData })
     }
   }
 
@@ -115,14 +122,14 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" && "Ajouter un parent"}
-            {mode === "edit" && "Modifier le parent"}
-            {mode === "view" && "Détails du parent"}
+            {mode === "create" && "Ajouter un enfant"}
+            {mode === "edit" && "Modifier l'enfant"}
+            {mode === "view" && "Détails de l'enfant"}
           </DialogTitle>
           <DialogDescription>
-            {mode === "create" && "Créer un nouveau parent dans le système"}
-            {mode === "edit" && "Modifier les informations du parent"}
-            {mode === "view" && "Consulter les informations du parent"}
+            {mode === "create" && "Créer un nouvel enfant dans le système"}
+            {mode === "edit" && "Modifier les informations de l'enfant"}
+            {mode === "view" && "Consulter les informations de l'enfant"}
           </DialogDescription>
         </DialogHeader>
 
@@ -131,10 +138,10 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="nom"
+                name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nom</FormLabel>
+                    <FormLabel>Prénom</FormLabel>
                     <FormControl>
                       <Input {...field} disabled={isReadOnly} />
                     </FormControl>
@@ -145,10 +152,10 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
 
               <FormField
                 control={form.control}
-                name="prenom"
+                name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prénom</FormLabel>
+                    <FormLabel>Nom</FormLabel>
                     <FormControl>
                       <Input {...field} disabled={isReadOnly} />
                     </FormControl>
@@ -160,12 +167,34 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
 
             <FormField
               control={form.control}
-              name="email"
+              name="gender"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Genre</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isReadOnly}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner le genre" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Masculin">Masculin</SelectItem>
+                      <SelectItem value="Féminin">Féminin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="date_of_birth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date de naissance</FormLabel>
                   <FormControl>
-                    <Input type="email" {...field} disabled={isReadOnly} />
+                    <Input type="date" {...field} disabled={isReadOnly} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -174,26 +203,12 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
 
             <FormField
               control={form.control}
-              name="telephone"
+              name="class"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
+                  <FormLabel>Classe</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="adresse"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Adresse</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} disabled={isReadOnly} />
+                    <Input {...field} disabled={isReadOnly} placeholder="Ex: CP, CE1, CE2..." />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

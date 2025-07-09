@@ -16,30 +16,27 @@ import {
   AlertCircle
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { qrCodeService, agentService, ChildEntry } from "@/lib/api"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 export default function QRCode() {
   const [childCode, setChildCode] = useState("")
   const [agentCode, setAgentCode] = useState("")
+  const [recuperatorCode, setRecuperatorCode] = useState("")
   const [scanType, setScanType] = useState<"entry" | "exit">("entry")
-  const [isScanning, setIsScanning] = useState(false)
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  const handleScan = async () => {
-    if (!childCode || !agentCode) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs requis",
-        variant: "destructive"
-      })
-      return
-    }
+  // Récupérer les scans récents
+  const { data: recentScans = [], isLoading: isLoadingScans } = useQuery({
+    queryKey: ['recent-scans'],
+    queryFn: () => qrCodeService.getRecentScans(10),
+    refetchInterval: 30000, // Actualiser toutes les 30 secondes
+  })
 
-    setIsScanning(true)
-    
-    try {
-      // Simulation d'un scan QR - ici vous pouvez intégrer l'API
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+  const scanMutation = useMutation({
+    mutationFn: qrCodeService.scanQRCode,
+    onSuccess: (data) => {
       toast({
         title: "Scan réussi",
         description: `${scanType === "entry" ? "Entrée" : "Sortie"} enregistrée avec succès`,
@@ -48,15 +45,53 @@ export default function QRCode() {
       // Reset form
       setChildCode("")
       setAgentCode("")
-    } catch (error) {
+      setRecuperatorCode("")
+      
+      // Rafraîchir les données
+      queryClient.invalidateQueries({ queryKey: ['recent-scans'] })
+      queryClient.invalidateQueries({ queryKey: ['entries'] })
+      
+      // Afficher les avertissements si présents
+      if (data.warnings && data.warnings.length > 0) {
+        data.warnings.forEach((warning: string) => {
+          toast({
+            title: "Avertissement",
+            description: warning,
+            variant: "destructive"
+          })
+        })
+      }
+    },
+    onError: (error: any) => {
+      console.error('Scan error:', error)
       toast({
         title: "Erreur de scan",
-        description: "Une erreur est survenue lors du scan",
+        description: error.message || "Une erreur est survenue lors du scan",
         variant: "destructive"
       })
-    } finally {
-      setIsScanning(false)
+    },
+  })
+
+  const handleScan = async () => {
+    if (!childCode || !agentCode) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir au moins les codes enfant et agent",
+        variant: "destructive"
+      })
+      return
     }
+
+    const scanData = {
+      child_id: childCode,
+      parent_user_id: "1", // À ajuster selon votre logique
+      agent_id: agentCode,
+      recuperator_id: recuperatorCode || undefined,
+      type: scanType,
+      scanned_at: new Date().toISOString(),
+    }
+
+    scanMutation.mutate(scanData)
   }
 
   return (
@@ -83,7 +118,11 @@ export default function QRCode() {
             <Scan className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">156</div>
+            <div className="text-2xl font-bold text-foreground">
+              {recentScans?.filter((scan: ChildEntry) => 
+                new Date(scan.scanned_at).toDateString() === new Date().toDateString()
+              ).length || 0}
+            </div>
           </CardContent>
         </Card>
         
@@ -95,7 +134,12 @@ export default function QRCode() {
             <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">89</div>
+            <div className="text-2xl font-bold text-foreground">
+              {recentScans?.filter((scan: ChildEntry) => 
+                scan.type === 'entry' && 
+                new Date(scan.scanned_at).toDateString() === new Date().toDateString()
+              ).length || 0}
+            </div>
           </CardContent>
         </Card>
 
@@ -107,7 +151,12 @@ export default function QRCode() {
             <XCircle className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">67</div>
+            <div className="text-2xl font-bold text-foreground">
+              {recentScans?.filter((scan: ChildEntry) => 
+                scan.type === 'exit' && 
+                new Date(scan.scanned_at).toDateString() === new Date().toDateString()
+              ).length || 0}
+            </div>
           </CardContent>
         </Card>
 
@@ -119,7 +168,7 @@ export default function QRCode() {
             <AlertCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">3</div>
+            <div className="text-2xl font-bold text-foreground">0</div>
           </CardContent>
         </Card>
       </div>
@@ -134,7 +183,7 @@ export default function QRCode() {
               Scanner QR Code
             </CardTitle>
             <CardDescription>
-              Scannez le code de l'enfant et de l'agent pour enregistrer l'entrée/sortie
+              Scannez les codes pour enregistrer l'entrée/sortie
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -155,6 +204,16 @@ export default function QRCode() {
                 placeholder="AG-123456-12345"
                 value={agentCode}
                 onChange={(e) => setAgentCode(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recuperatorCode">Code Récupérateur (optionnel)</Label>
+              <Input 
+                id="recuperatorCode"
+                placeholder="RC-123456-12345"
+                value={recuperatorCode}
+                onChange={(e) => setRecuperatorCode(e.target.value)}
               />
             </div>
 
@@ -182,10 +241,10 @@ export default function QRCode() {
 
             <Button 
               onClick={handleScan}
-              disabled={isScanning}
+              disabled={scanMutation.isPending}
               className="w-full bg-gradient-primary"
             >
-              {isScanning ? (
+              {scanMutation.isPending ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Scan en cours...
@@ -235,27 +294,44 @@ export default function QRCode() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[
-              { time: "14:30", child: "CH-001", agent: "AG-001", type: "entry", status: "success" },
-              { time: "14:25", child: "CH-002", agent: "AG-002", type: "exit", status: "success" },
-              { time: "14:20", child: "CH-003", agent: "AG-001", type: "entry", status: "error" },
-            ].map((scan, index) => (
-              <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-medium">{scan.time}</div>
-                  <Badge variant="outline">{scan.child}</Badge>
-                  <Badge variant="outline">{scan.agent}</Badge>
-                  <Badge className={scan.type === "entry" ? "bg-success text-success-foreground" : "bg-info text-info-foreground"}>
-                    {scan.type === "entry" ? "Entrée" : "Sortie"}
+          {isLoadingScans ? (
+            <div className="text-center py-4">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+              <p className="text-muted-foreground">Chargement des scans récents...</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentScans.slice(0, 5).map((scan: ChildEntry, index: number) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium">
+                      {new Date(scan.scanned_at).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    <Badge variant="outline">Enfant: {scan.child_id}</Badge>
+                    <Badge variant="outline">Agent: {scan.agent_id}</Badge>
+                    {scan.recuperator_id && (
+                      <Badge variant="outline">Récup: {scan.recuperator_id}</Badge>
+                    )}
+                    <Badge className={scan.type === "entry" ? "bg-success text-success-foreground" : "bg-info text-info-foreground"}>
+                      {scan.type === "entry" ? "Entrée" : "Sortie"}
+                    </Badge>
+                  </div>
+                  <Badge variant="default">
+                    Réussi
                   </Badge>
                 </div>
-                <Badge variant={scan.status === "success" ? "default" : "destructive"}>
-                  {scan.status === "success" ? "Réussi" : "Erreur"}
-                </Badge>
-              </div>
-            ))}
-          </div>
+              ))}
+              
+              {recentScans.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Aucun scan récent</p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

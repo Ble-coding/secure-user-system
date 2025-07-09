@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,21 +25,25 @@ import {
   Lock
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { authService } from "@/lib/api"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 export default function MonCompte() {
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  const [userData, setUserData] = useState({
-    name: "Admin User",
-    email: "admin@example.com",
-    phone: "+33 1 23 45 67 89",
-    role: "Administrateur",
-    address: "123 Rue de l'École, Paris",
-    joinDate: "Janvier 2024",
-    lastLogin: "Aujourd'hui à 14:30",
-    avatar: "/placeholder-user.jpg"
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  })
+
+  const [passwordData, setPasswordData] = useState({
+    current_password: "",
+    password: "",
+    password_confirmation: "",
   })
 
   const [notifications, setNotifications] = useState({
@@ -53,19 +57,91 @@ export default function MonCompte() {
     loginAlerts: true
   })
 
+  // Récupérer les données utilisateur
+  const { data: user, isLoading, error } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: authService.me,
+    retry: false,
+  })
+
+  // Mettre à jour les données du formulaire quand l'utilisateur est chargé
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      })
+    }
+  }, [user])
+
+  const updateProfileMutation = useMutation({
+    mutationFn: authService.updateProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      toast({ title: "Profil mis à jour avec succès" })
+      setIsEditing(false)
+    },
+    onError: (error: any) => {
+      console.error('Error updating profile:', error)
+      toast({ 
+        title: "Erreur lors de la mise à jour", 
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive" 
+      })
+    },
+  })
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: authService.updatePassword,
+    onSuccess: () => {
+      toast({ title: "Mot de passe changé avec succès" })
+      setPasswordData({ current_password: "", password: "", password_confirmation: "" })
+    },
+    onError: (error: any) => {
+      console.error('Error updating password:', error)
+      toast({ 
+        title: "Erreur lors du changement de mot de passe", 
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive" 
+      })
+    },
+  })
+
   const handleSave = () => {
-    setIsEditing(false)
-    toast({ 
-      title: "Profil mis à jour", 
-      description: "Vos informations ont été sauvegardées avec succès" 
-    })
+    updateProfileMutation.mutate(formData)
   }
 
   const handlePasswordChange = () => {
-    toast({ 
-      title: "Mot de passe changé", 
-      description: "Votre mot de passe a été mis à jour avec succès" 
-    })
+    if (passwordData.password !== passwordData.password_confirmation) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    updatePasswordMutation.mutate(passwordData)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Chargement...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="text-destructive mb-2">Erreur lors du chargement du profil</div>
+          <p className="text-muted-foreground">Vous devez être connecté pour accéder à cette page</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -80,8 +156,11 @@ export default function MonCompte() {
           <Button 
             variant={isEditing ? "default" : "outline"}
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+            disabled={updateProfileMutation.isPending}
           >
-            {isEditing ? (
+            {updateProfileMutation.isPending ? (
+              "Enregistrement..."
+            ) : isEditing ? (
               <>
                 <Save className="w-4 h-4 mr-2" />
                 Enregistrer
@@ -112,9 +191,9 @@ export default function MonCompte() {
                 <div className="flex flex-col items-center space-y-4">
                   <div className="relative">
                     <Avatar className="w-24 h-24">
-                      <AvatarImage src={userData.avatar} />
+                      <AvatarImage src={user?.photo} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                        {userData.name.split(' ').map(n => n[0]).join('')}
+                        {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     {isEditing && (
@@ -128,9 +207,9 @@ export default function MonCompte() {
                     )}
                   </div>
                   <div className="text-center">
-                    <h3 className="font-semibold text-lg">{userData.name}</h3>
+                    <h3 className="font-semibold text-lg">{user?.name || 'Utilisateur'}</h3>
                     <Badge className="bg-primary text-primary-foreground">
-                      {userData.role}
+                      Administrateur
                     </Badge>
                   </div>
                 </div>
@@ -138,11 +217,11 @@ export default function MonCompte() {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
-                  <span>Membre depuis {userData.joinDate}</span>
+                  <span>Membre depuis {new Date().getFullYear()}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Shield className="w-4 h-4" />
-                  <span>Dernière connexion: {userData.lastLogin}</span>
+                  <span>Dernière connexion: Aujourd'hui</span>
                 </div>
               </CardContent>
             </Card>
@@ -163,8 +242,8 @@ export default function MonCompte() {
                       <User className="w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="name"
-                        value={userData.name}
-                        onChange={(e) => setUserData({...userData, name: e.target.value})}
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
                         disabled={!isEditing}
                         className={!isEditing ? "border-0 bg-transparent" : ""}
                       />
@@ -178,8 +257,8 @@ export default function MonCompte() {
                       <Input 
                         id="email"
                         type="email"
-                        value={userData.email}
-                        onChange={(e) => setUserData({...userData, email: e.target.value})}
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
                         disabled={!isEditing}
                         className={!isEditing ? "border-0 bg-transparent" : ""}
                       />
@@ -192,8 +271,8 @@ export default function MonCompte() {
                       <Phone className="w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="phone"
-                        value={userData.phone}
-                        onChange={(e) => setUserData({...userData, phone: e.target.value})}
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         disabled={!isEditing}
                         className={!isEditing ? "border-0 bg-transparent" : ""}
                       />
@@ -206,25 +285,11 @@ export default function MonCompte() {
                       <Shield className="w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="role"
-                        value={userData.role}
+                        value="Administrateur"
                         disabled
                         className="border-0 bg-transparent"
                       />
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Adresse</Label>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      id="address"
-                      value={userData.address}
-                      onChange={(e) => setUserData({...userData, address: e.target.value})}
-                      disabled={!isEditing}
-                      className={!isEditing ? "border-0 bg-transparent" : ""}
-                    />
                   </div>
                 </div>
               </CardContent>
@@ -245,10 +310,46 @@ export default function MonCompte() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <Button onClick={handlePasswordChange} className="w-full justify-start">
-                  <Key className="w-4 h-4 mr-2" />
-                  Changer le mot de passe
-                </Button>
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-medium">Changer le mot de passe</h4>
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current_password">Mot de passe actuel</Label>
+                      <Input 
+                        id="current_password"
+                        type="password"
+                        value={passwordData.current_password}
+                        onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new_password">Nouveau mot de passe</Label>
+                      <Input 
+                        id="new_password"
+                        type="password"
+                        value={passwordData.password}
+                        onChange={(e) => setPasswordData({...passwordData, password: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm_password">Confirmer le mot de passe</Label>
+                      <Input 
+                        id="confirm_password"
+                        type="password"
+                        value={passwordData.password_confirmation}
+                        onChange={(e) => setPasswordData({...passwordData, password_confirmation: e.target.value})}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handlePasswordChange}
+                      disabled={updatePasswordMutation.isPending}
+                      className="w-fit"
+                    >
+                      <Key className="w-4 h-4 mr-2" />
+                      {updatePasswordMutation.isPending ? "Changement..." : "Changer le mot de passe"}
+                    </Button>
+                  </div>
+                </div>
                 
                 <div className="flex items-center justify-between">
                   <div>
