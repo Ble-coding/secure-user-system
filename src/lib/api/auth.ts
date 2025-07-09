@@ -6,6 +6,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginResponse {
   token: string;
   user: any;
@@ -24,6 +30,12 @@ export interface UpdatePasswordRequest {
 }
 
 export const authService = {
+  register: (credentials: RegisterRequest) =>
+    apiRequest<LoginResponse>('/users/register', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    }),
+
   login: (credentials: LoginRequest) =>
     apiRequest<LoginResponse>('/users/login', {
       method: 'POST',
