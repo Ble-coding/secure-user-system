@@ -15,6 +15,8 @@ import Entries from "./pages/Entries";
 import Chat from "./pages/Chat";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import MonCompte from "./pages/MonCompte";
+import Roles from "./pages/Roles";
 import { DashboardLayout } from "./components/DashboardLayout";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,16 @@ const App = () => (
           <Route path="/chat" element={
             <DashboardLayout>
               <Chat />
+            </DashboardLayout>
+          } />
+          <Route path="/mon-compte" element={
+            <DashboardLayout>
+              <MonCompte />
+            </DashboardLayout>
+          } />
+          <Route path="/roles" element={
+            <DashboardLayout>
+              <Roles />
             </DashboardLayout>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

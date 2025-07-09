@@ -1,8 +1,8 @@
 
 // Configuration de l'API pour Laravel
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://kidpass.nady-group.com/api';
 
-// Types pour les entités
+// Types pour les entités basés sur les modèles Laravel
 export interface User {
   id: number;
   name: string;
@@ -15,46 +15,95 @@ export interface User {
 
 export interface Agent {
   id: number;
-  name: string;
+  first_name: string;
+  last_name: string;
+  code: string;
   email: string;
   phone: string;
+  type: string; // "enseignant", "surveillant", "sécurité"
   status: 'En service' | 'Hors service' | 'En pause';
-  zone: string;
-  lastActivity: string;
+  date_naissance?: string;
+  sexe?: string;
+  ville?: string;
+  photo?: string;
+  document_type?: string;
+  document_numero?: string;
+  document_file?: string;
+  first_login?: boolean;
+  pin_encrypted?: string;
+  user_id?: number;
 }
 
-export interface Parent {
+export interface ParentUser {
   id: number;
-  name: string;
+  nom: string;
+  prenom: string;
+  code: string;
   email: string;
-  phone: string;
-  address: string;
+  telephone: string;
+  adresse: string;
   children: Child[];
   status: 'Actif' | 'Inactif';
+  date_naissance?: string;
+  photo?: string;
+  sexe?: string;
+  ville?: string;
+  document_type?: string;
+  document_numero?: string;
+  document_file?: string;
+  first_login?: boolean;
+  pin_encrypted?: string;
+  user_id?: number;
 }
 
 export interface Child {
   id: number;
-  name: string;
-  age: number;
+  parent_id: number;
+  first_name: string;
+  last_name: string;
+  code: string;
+  gender: string;
+  date_of_birth: string;
+  photo?: string;
   class: string;
-  parentId: number;
+  enrolled_at?: string;
   status: 'Présent' | 'Absent' | 'Récupéré';
 }
 
 export interface Recuperator {
   id: number;
-  name: string;
-  email: string;
+  parent_id: number;
+  first_name: string;
+  last_name: string;
+  code: string;
   phone: string;
+  relation_type: string;
+  document_type?: string;
+  document_file?: string;
+  photo?: string;
+  is_active: boolean;
   authorizedChildren: number[];
   status: 'Actif' | 'Inactif';
+  identity_confirmation_at?: string;
+  first_login?: boolean;
+  pin_encrypted?: string;
+  user_id?: number;
+}
+
+export interface ChildEntry {
+  id: number;
+  child_id: number;
+  recuperator_id?: number;
+  agent_id: number;
+  type: 'entry' | 'exit';
+  scanned_at: string;
+  user_id?: number;
 }
 
 export interface Entry {
   id: number;
   childId: number;
-  recuperatorId: number;
+  recuperatorId?: number;
   agentId: number;
   entryTime: string;
   status: 'Entrée' | 'Sortie';
@@ -163,29 +212,67 @@ export const agentService = {
     apiRequest(`/users/agents/${id}`, {
       method: 'DELETE',
     }),
+
+  scanQrCode: (scanData: {
+    child_id: string;
+    parent_user_id: string;
+    agent_id: string;
+    recuperator_id?: string;
+    type: 'entry' | 'exit';
+    scanned_at?: string;
+  }) =>
+    apiRequest<{ entry: ChildEntry; warnings?: string[] }>('/agents/scan-qr-code', {
+      method: 'POST',
+      body: JSON.stringify(scanData),
+    }),
 };
 
 export const parentService = {
   getAll: () =>
-    apiRequest<Parent[]>('/users/parents'),
+    apiRequest<ParentUser[]>('/users/parents'),
 
   getById: (id: number) =>
-    apiRequest<Parent>(`/users/parents/${id}`),
+    apiRequest<ParentUser>(`/users/parents/${id}`),
 
-  create: (parentData: Partial<Parent>) =>
-    apiRequest<Parent>('/users/parents', {
+  create: (parentData: Partial<ParentUser>) =>
+    apiRequest<ParentUser>('/users/parents', {
       method: 'POST',
       body: JSON.stringify(parentData),
     }),
 
-  update: (id: number, parentData: Partial<Parent>) =>
-    apiRequest<Parent>(`/users/parents/${id}`, {
+  update: (id: number, parentData: Partial<ParentUser>) =>
+    apiRequest<ParentUser>(`/users/parents/${id}`, {
       method: 'PUT',
       body: JSON.stringify(parentData),
     }),
 
   delete: (id: number) =>
     apiRequest(`/users/parents/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+export const childService = {
+  getAll: () =>
+    apiRequest<Child[]>('/users/children'),
+
+  getById: (id: number) =>
+    apiRequest<Child>(`/users/children/${id}`),
+
+  create: (childData: Partial<Child>) =>
+    apiRequest<Child>('/users/children', {
+      method: 'POST',
+      body: JSON.stringify(childData),
+    }),
+
+  update: (id: number, childData: Partial<Child>) =>
+    apiRequest<Child>(`/users/children/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(childData),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`/users/children/${id}`, {
       method: 'DELETE',
     }),
 };
@@ -222,5 +309,14 @@ export const recuperatorService = {
 
 export const entryService = {
   getAll: () =>
-    apiRequest<Entry[]>('/users/entries/all'),
+    apiRequest<ChildEntry[]>('/users/entries/all'),
+
+  create: (entryData: Partial<ChildEntry>) =>
+    apiRequest<ChildEntry>('/users/entries', {
+      method: 'POST',
+      body: JSON.stringify(entryData),
+    }),
 };
+
+// Compatibilité avec l'ancien type Parent
+export type Parent = ParentUser;
