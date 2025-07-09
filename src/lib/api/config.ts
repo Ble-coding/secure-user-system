@@ -9,6 +9,7 @@ export const getAuthHeaders = () => {
     'Content-Type': 'application/json',
     'Authorization': token ? `Bearer ${token}` : '',
     'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   };
 };
 
@@ -26,11 +27,19 @@ export const apiRequest = async <T>(
     },
   };
 
+  console.log('API Request:', url, config);
+
   const response = await fetch(url, config);
   
+  console.log('API Response:', response.status, response.statusText);
+
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('API Error Response:', errorText);
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('API Response Data:', data);
+  return data;
 };

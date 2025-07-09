@@ -17,6 +17,7 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import MonCompte from "./pages/MonCompte";
 import Roles from "./pages/Roles";
+import QRCode from "./pages/QRCode";
 import { DashboardLayout } from "./components/DashboardLayout";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
         <Routes>
           {/* Auth Routes */}
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/auth/register" element={<Register />} />
           
           {/* Protected Routes */}
@@ -74,9 +76,19 @@ const App = () => (
               <MonCompte />
             </DashboardLayout>
           } />
+          <Route path="/profile" element={
+            <DashboardLayout>
+              <MonCompte />
+            </DashboardLayout>
+          } />
           <Route path="/roles" element={
             <DashboardLayout>
               <Roles />
+            </DashboardLayout>
+          } />
+          <Route path="/qrcode" element={
+            <DashboardLayout>
+              <QRCode />
             </DashboardLayout>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

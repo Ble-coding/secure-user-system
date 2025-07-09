@@ -1,3 +1,4 @@
+
 import { StatsCard } from "@/components/StatsCard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,10 +13,14 @@ import {
   TrendingUp,
   Activity,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+
   const recentActivities = [
     { id: 1, action: "Nouveau parent enregistré", user: "Marie Dupont", time: "Il y a 5 min", status: "success" },
     { id: 2, action: "QR Code scanné", user: "Jean Martin", time: "Il y a 12 min", status: "info" },
@@ -136,25 +141,53 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => navigate('/users')}
+            >
               <Users className="w-4 h-4 mr-2" />
-              Ajouter un utilisateur
+              Gestion des Utilisateurs
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => navigate('/agents')}
+            >
               <UserCheck className="w-4 h-4 mr-2" />
-              Ajouter un agent
+              Gestion des Agents
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => navigate('/parents')}
+            >
               <Users2 className="w-4 h-4 mr-2" />
-              Ajouter un parent
+              Gestion des Parents
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => navigate('/recuperators')}
+            >
               <Heart className="w-4 h-4 mr-2" />
-              Ajouter un récupérateur
+              Gestion des Récupérateurs
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => navigate('/children')}
+            >
               <Baby className="w-4 h-4 mr-2" />
-              Ajouter un enfant
+              Gestion des Enfants
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => navigate('/qrcode')}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Scanner QR Code
             </Button>
           </CardContent>
         </Card>
@@ -179,7 +212,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              QR Codes générés
+              QR Codes scannés
             </CardTitle>
           </CardHeader>
           <CardContent>
