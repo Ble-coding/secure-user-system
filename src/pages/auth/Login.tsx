@@ -36,7 +36,10 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true)
     try {
-      const response = await authService.login(data)
+      const response = await authService.login({
+        email: data.email,
+        password: data.password
+      })
       localStorage.setItem('auth_token', response.token)
       toast({ title: "Connexion réussie" })
       navigate("/")

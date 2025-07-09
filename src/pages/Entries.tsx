@@ -22,7 +22,7 @@ import {
   ArrowRight,
   ArrowLeft
 } from "lucide-react"
-import { entryService, Entry } from "@/lib/api"
+import { entryService, ChildEntry } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
 
 export default function Entries() {
@@ -33,8 +33,8 @@ export default function Entries() {
     queryFn: entryService.getAll,
   })
 
-  const getStatusBadge = (status: string) => {
-    return status === "Entrée" 
+  const getStatusBadge = (type: string) => {
+    return type === "entry" 
       ? <Badge className="bg-success text-success-foreground flex items-center gap-1">
           <ArrowRight className="w-3 h-3" />
           Entrée
@@ -45,10 +45,10 @@ export default function Entries() {
         </Badge>
   }
 
-  const filteredEntries = entries.filter((entry: Entry) =>
-    entry.childId.toString().includes(searchTerm) ||
-    entry.recuperatorId.toString().includes(searchTerm) ||
-    entry.agentId.toString().includes(searchTerm)
+  const filteredEntries = entries.filter((entry: ChildEntry) =>
+    entry.child_id.toString().includes(searchTerm) ||
+    entry.recuperator_id?.toString().includes(searchTerm) ||
+    entry.agent_id.toString().includes(searchTerm)
   )
 
   if (isLoading) {
@@ -104,7 +104,7 @@ export default function Entries() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {entries.filter((e: Entry) => e.status === "Entrée").length}
+              {entries.filter((e: ChildEntry) => e.type === "entry").length}
             </div>
           </CardContent>
         </Card>
@@ -118,7 +118,7 @@ export default function Entries() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {entries.filter((e: Entry) => e.status === "Sortie").length}
+              {entries.filter((e: ChildEntry) => e.type === "exit").length}
             </div>
           </CardContent>
         </Card>
@@ -177,20 +177,20 @@ export default function Entries() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEntries.map((entry: Entry) => (
+                {filteredEntries.map((entry: ChildEntry) => (
                   <TableRow key={entry.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
-                      {new Date(entry.entryTime).toLocaleTimeString('fr-FR', {
+                      {new Date(entry.scanned_at).toLocaleTimeString('fr-FR', {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
                     </TableCell>
-                    <TableCell>ID: {entry.childId}</TableCell>
-                    <TableCell>ID: {entry.recuperatorId}</TableCell>
-                    <TableCell>ID: {entry.agentId}</TableCell>
-                    <TableCell>{getStatusBadge(entry.status)}</TableCell>
+                    <TableCell>ID: {entry.child_id}</TableCell>
+                    <TableCell>ID: {entry.recuperator_id || "N/A"}</TableCell>
+                    <TableCell>ID: {entry.agent_id}</TableCell>
+                    <TableCell>{getStatusBadge(entry.type)}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {entry.notes || "Aucune note"}
+                      Aucune note
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon">

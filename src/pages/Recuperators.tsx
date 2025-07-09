@@ -86,8 +86,8 @@ export default function Recuperators() {
   }
 
   const filteredRecuperators = recuperators.filter((recuperator: Recuperator) => {
-    const matchesSearch = recuperator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      recuperator.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const fullName = `${recuperator.first_name} ${recuperator.last_name}`.toLowerCase()
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
       recuperator.phone.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === "all" || recuperator.status === statusFilter
@@ -217,7 +217,7 @@ export default function Recuperators() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input 
-                placeholder="Rechercher par nom, email ou téléphone..." 
+                placeholder="Rechercher par nom ou téléphone..." 
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -250,10 +250,9 @@ export default function Recuperators() {
               <TableBody>
                 {filteredRecuperators.map((recuperator: Recuperator) => (
                   <TableRow key={recuperator.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{recuperator.name}</TableCell>
+                    <TableCell className="font-medium">{`${recuperator.first_name} ${recuperator.last_name}`}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="text-foreground">{recuperator.email}</div>
                         <div className="text-muted-foreground flex items-center gap-1">
                           <Phone className="w-3 h-3" />
                           {recuperator.phone}

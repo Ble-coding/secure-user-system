@@ -41,7 +41,7 @@ import {
   Phone,
   MapPin
 } from "lucide-react"
-import { parentService, Parent } from "@/lib/api"
+import { parentService, ParentUser } from "@/lib/api"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ParentModal } from "@/components/modals/ParentModal"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
@@ -53,11 +53,11 @@ export default function Parents() {
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     mode: "create" | "edit" | "view"
-    parent?: Parent
+    parent?: ParentUser
   }>({ isOpen: false, mode: "create" })
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
-    parent?: Parent
+    parent?: ParentUser
   }>({ isOpen: false })
 
   const { toast } = useToast()
@@ -85,25 +85,26 @@ export default function Parents() {
       : <Badge variant="secondary">Inactif</Badge>
   }
 
-  const filteredParents = parents.filter((parent: Parent) => {
-    const matchesSearch = parent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredParents = parents.filter((parent: ParentUser) => {
+    const fullName = `${parent.nom} ${parent.prenom}`.toLowerCase()
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
       parent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      parent.phone.toLowerCase().includes(searchTerm.toLowerCase())
+      parent.telephone.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === "all" || parent.status === statusFilter
     
     return matchesSearch && matchesStatus
   })
 
-  const handleEdit = (parent: Parent) => {
+  const handleEdit = (parent: ParentUser) => {
     setModalState({ isOpen: true, mode: "edit", parent })
   }
 
-  const handleView = (parent: Parent) => {
+  const handleView = (parent: ParentUser) => {
     setModalState({ isOpen: true, mode: "view", parent })
   }
 
-  const handleDelete = (parent: Parent) => {
+  const handleDelete = (parent: ParentUser) => {
     setDeleteModal({ isOpen: true, parent })
   }
 
@@ -170,7 +171,7 @@ export default function Parents() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {parents.filter((p: Parent) => p.status === "Actif").length}
+              {parents.filter((p: ParentUser) => p.status === "Actif").length}
             </div>
           </CardContent>
         </Card>
@@ -184,7 +185,7 @@ export default function Parents() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {parents.filter((p: Parent) => p.status === "Inactif").length}
+              {parents.filter((p: ParentUser) => p.status === "Inactif").length}
             </div>
           </CardContent>
         </Card>
@@ -198,7 +199,7 @@ export default function Parents() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {parents.reduce((total: number, parent: Parent) => total + parent.children.length, 0)}
+              {parents.reduce((total: number, parent: ParentUser) => total + parent.children.length, 0)}
             </div>
           </CardContent>
         </Card>
@@ -249,22 +250,22 @@ export default function Parents() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredParents.map((parent: Parent) => (
+                {filteredParents.map((parent: ParentUser) => (
                   <TableRow key={parent.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{parent.name}</TableCell>
+                    <TableCell className="font-medium">{`${parent.nom} ${parent.prenom}`}</TableCell>
                     <TableCell>
                       <div className="text-sm">
                         <div className="text-foreground">{parent.email}</div>
                         <div className="text-muted-foreground flex items-center gap-1">
                           <Phone className="w-3 h-3" />
-                          {parent.phone}
+                          {parent.telephone}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-muted-foreground flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
-                        {parent.address}
+                        {parent.adresse}
                       </div>
                     </TableCell>
                     <TableCell>
