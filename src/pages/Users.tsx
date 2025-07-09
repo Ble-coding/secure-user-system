@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,18 +32,42 @@ import {
   UserCheck,
   UserX
 } from "lucide-react"
+import { userService, User } from "@/lib/api"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { UserModal } from "@/components/modals/UserModal"
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    mode: "create" | "edit" | "view"
+    user?: User
+  }>({ isOpen: false, mode: "create" })
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    user?: User
+  }>({ isOpen: false })
 
-  const users = [
-    { id: 1, name: "Marie Dupont", email: "marie.dupont@email.com", role: "Parent", status: "Actif", lastLogin: "2024-01-15" },
-    { id: 2, name: "Jean Martin", email: "jean.martin@email.com", role: "Agent", status: "Actif", lastLogin: "2024-01-15" },
-    { id: 3, name: "Sophie Bernard", email: "sophie.bernard@email.com", role: "Récupérateur", status: "Actif", lastLogin: "2024-01-14" },
-    { id: 4, name: "Pierre Moreau", email: "pierre.moreau@email.com", role: "Admin", status: "Inactif", lastLogin: "2024-01-10" },
-    { id: 5, name: "Anna Dubois", email: "anna.dubois@email.com", role: "Parent", status: "Actif", lastLogin: "2024-01-15" },
-    { id: 6, name: "Thomas Leroy", email: "thomas.leroy@email.com", role: "Agent", status: "Actif", lastLogin: "2024-01-15" },
-  ]
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+
+  const { data: users = [], isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: userService.getAll,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: userService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast({ title: "Utilisateur supprimé avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" })
+    },
+  })
 
   const getStatusBadge = (status: string) => {
     return status === "Actif" 
@@ -60,11 +85,46 @@ export default function Users() {
     return <Badge className={colors[role as keyof typeof colors] || "bg-muted text-muted-foreground"}>{role}</Badge>
   }
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter((user: User) =>
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.role?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleEdit = (user: User) => {
+    setModalState({ isOpen: true, mode: "edit", user })
+  }
+
+  const handleView = (user: User) => {
+    setModalState({ isOpen: true, mode: "view", user })
+  }
+
+  const handleDelete = (user: User) => {
+    setDeleteModal({ isOpen: true, user })
+  }
+
+  const confirmDelete = () => {
+    if (deleteModal.user) {
+      deleteMutation.mutate(deleteModal.user.id)
+      setDeleteModal({ isOpen: false })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Chargement...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-destructive">Erreur lors du chargement des utilisateurs</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -74,7 +134,10 @@ export default function Users() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des Utilisateurs</h1>
           <p className="text-muted-foreground">Gérez tous les utilisateurs du système</p>
         </div>
-        <Button className="bg-gradient-primary">
+        <Button 
+          className="bg-gradient-primary"
+          onClick={() => setModalState({ isOpen: true, mode: "create" })}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Ajouter un utilisateur
         </Button>
@@ -103,7 +166,7 @@ export default function Users() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {users.filter(u => u.status === "Actif").length}
+              {users.filter((u: User) => u.status === "Actif").length}
             </div>
           </CardContent>
         </Card>
@@ -117,7 +180,7 @@ export default function Users() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {users.filter(u => u.status === "Inactif").length}
+              {users.filter((u: User) => u.status === "Inactif").length}
             </div>
           </CardContent>
         </Card>
@@ -174,13 +237,13 @@ export default function Users() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {filteredUsers.map((user: User) => (
                   <TableRow key={user.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell className="text-muted-foreground">{user.lastLogin}</TableCell>
+                    <TableCell>{getStatusBadge(user.status || "Actif")}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.last_login || "N/A"}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -190,16 +253,16 @@ export default function Users() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover border-border">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleView(user)}>
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(user)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive">
+                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(user)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Supprimer
                           </DropdownMenuItem>
@@ -219,6 +282,23 @@ export default function Users() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <UserModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, mode: "create" })}
+        user={modalState.user}
+        mode={modalState.mode}
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Supprimer cet utilisateur"
+        description="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

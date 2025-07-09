@@ -31,7 +31,7 @@ export interface UpdatePasswordRequest {
 
 export const authService = {
   register: (credentials: RegisterRequest) =>
-    apiRequest<LoginResponse>('/users/register', {
+    apiRequest<LoginResponse>('/users/access', {
       method: 'POST',
       body: JSON.stringify(credentials),
     }),
@@ -70,7 +70,6 @@ export const authService = {
       method: 'PUT',
       body: formData,
       headers: {
-        // Don't set Content-Type, let browser set it for FormData
         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
