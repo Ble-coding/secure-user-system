@@ -27,11 +27,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 const childSchema = z.object({
+  parent_id: z.number().min(1, "Parent requis"),
   first_name: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
   last_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  gender: z.string().min(1, "Le genre est requis"),
-  date_of_birth: z.string().min(1, "La date de naissance est requise"),
-  class: z.string().min(1, "La classe est requise"),
+  gender: z.enum(["M", "F"], { message: "Sélectionnez le genre" }),
+  date_of_birth: z.string().min(1, "Date de naissance requise"),
+  class: z.string().optional(),
+  enrolled_at: z.string().optional(),
+  photo: z.any().optional(),
 })
 
 type ChildFormData = z.infer<typeof childSchema>
@@ -50,22 +53,26 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
   const form = useForm<ChildFormData>({
     resolver: zodResolver(childSchema),
     defaultValues: child ? {
+      parent_id: child.parent_id,
       first_name: child.first_name || "",
       last_name: child.last_name || "",
-      gender: child.gender || "",
+      gender: child.gender as "M" | "F",
       date_of_birth: child.date_of_birth || "",
       class: child.class || "",
+      enrolled_at: child.enrolled_at || "",
     } : {
+      parent_id: 1,
       first_name: "",
       last_name: "",
-      gender: "",
+      gender: "M",
       date_of_birth: "",
       class: "",
+      enrolled_at: "",
     },
   })
 
   const createMutation = useMutation({
-    mutationFn: childService.create,
+    mutationFn: (formData: FormData) => childService.create(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['children'] })
       toast({ title: "Enfant créé avec succès" })
@@ -83,7 +90,7 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Child> }) =>
+    mutationFn: ({ id, data }: { id: number; data: FormData }) =>
       childService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['children'] })
@@ -101,17 +108,21 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
   })
 
   const onSubmit = (data: ChildFormData) => {
-    const submitData = {
-      ...data,
-      parent_id: 1, // Vous devrez ajuster ceci selon votre logique
-      code: `CH-${Date.now()}`, // Génération temporaire du code
-      status: "Présent" as const,
-    };
+    const formData = new FormData()
+    
+    formData.append('parent_id', data.parent_id.toString())
+    formData.append('first_name', data.first_name)
+    formData.append('last_name', data.last_name)
+    formData.append('gender', data.gender)
+    formData.append('date_of_birth', data.date_of_birth)
+    if (data.class) formData.append('class', data.class)
+    if (data.enrolled_at) formData.append('enrolled_at', data.enrolled_at)
+    if (data.photo) formData.append('photo', data.photo)
 
     if (mode === "create") {
-      createMutation.mutate(submitData)
+      createMutation.mutate(formData)
     } else if (mode === "edit" && child) {
-      updateMutation.mutate({ id: child.id, data: submitData })
+      updateMutation.mutate({ id: child.id, data: formData })
     }
   }
 
@@ -141,7 +152,7 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
                 name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prénom</FormLabel>
+                    <FormLabel>Prénom *</FormLabel>
                     <FormControl>
                       <Input {...field} disabled={isReadOnly} />
                     </FormControl>
@@ -155,7 +166,7 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
                 name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nom</FormLabel>
+                    <FormLabel>Nom *</FormLabel>
                     <FormControl>
                       <Input {...field} disabled={isReadOnly} />
                     </FormControl>
@@ -165,23 +176,53 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Genre *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isReadOnly}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner le genre" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="M">Masculin</SelectItem>
+                        <SelectItem value="F">Féminin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="date_of_birth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date de naissance *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} disabled={isReadOnly} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="gender"
+              name="class"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Genre</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isReadOnly}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner le genre" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Masculin">Masculin</SelectItem>
-                      <SelectItem value="Féminin">Féminin</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Classe</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isReadOnly} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -189,10 +230,10 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
 
             <FormField
               control={form.control}
-              name="date_of_birth"
+              name="enrolled_at"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date de naissance</FormLabel>
+                  <FormLabel>Date d'inscription</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} disabled={isReadOnly} />
                   </FormControl>
@@ -203,12 +244,18 @@ export function ChildModal({ isOpen, onClose, child, mode }: ChildModalProps) {
 
             <FormField
               control={form.control}
-              name="class"
-              render={({ field }) => (
+              name="photo"
+              render={({ field: { onChange, value, ...field } }) => (
                 <FormItem>
-                  <FormLabel>Classe</FormLabel>
+                  <FormLabel>Photo</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled={isReadOnly} placeholder="Ex: CP, CE1, CE2..." />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => onChange(e.target.files?.[0])}
+                      disabled={isReadOnly}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

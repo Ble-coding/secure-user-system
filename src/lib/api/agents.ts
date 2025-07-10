@@ -41,6 +41,15 @@ export const agentService = {
       method: 'DELETE',
     }),
 
+  restore: (code: string) =>
+    apiRequest<ApiResponse<Agent>>(`/users/agents/${code}/restore`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      }
+    }),
+
   scanQrCode: (scanData: {
     child_id: string;
     parent_user_id: string;

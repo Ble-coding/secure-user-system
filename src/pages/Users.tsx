@@ -2,11 +2,12 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, RotateCcw } from "lucide-react"
 import { userService, User } from "@/lib/api"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { UserModal } from "@/components/modals/UserModal"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { RestoreModal } from "@/components/modals/RestoreModal"
 import { useToast } from "@/hooks/use-toast"
 import { UserStats } from "@/components/users/UserStats"
 import { UserFilters } from "@/components/users/UserFilters"
@@ -20,6 +21,10 @@ export default function Users() {
     user?: User
   }>({ isOpen: false, mode: "create" })
   const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    user?: User
+  }>({ isOpen: false })
+  const [restoreModal, setRestoreModal] = useState<{
     isOpen: boolean
     user?: User
   }>({ isOpen: false })
@@ -43,6 +48,17 @@ export default function Users() {
     },
   })
 
+  const restoreMutation = useMutation({
+    mutationFn: userService.restore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast({ title: "Utilisateur restauré avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la restauration", variant: "destructive" })
+    },
+  })
+
   const filteredUsers = users.filter((user: User) =>
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,10 +77,22 @@ export default function Users() {
     setDeleteModal({ isOpen: true, user })
   }
 
+  const handleRestore = (user: User) => {
+    setRestoreModal({ isOpen: true, user })
+  }
+
   const confirmDelete = () => {
     if (deleteModal.user) {
       deleteMutation.mutate(deleteModal.user.id)
       setDeleteModal({ isOpen: false })
+    }
+  }
+
+  const confirmRestore = () => {
+    if (restoreModal.user) {
+      // Assumons que l'user a un code ou utilisons l'email comme identifiant
+      restoreMutation.mutate(restoreModal.user.email)
+      setRestoreModal({ isOpen: false })
     }
   }
 
@@ -90,7 +118,10 @@ export default function Users() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Gestion des Utilisateurs</h1>
-          <p className="text-muted-foreground">Gérez tous les utilisateurs du système</p>
+          <p className="text-muted-foreground">
+            Gérez tous les utilisateurs du système - 
+            {users.find((u: User) => u.role === "Admin")?.name || "Administrateur"} connecté
+          </p>
         </div>
         <Button 
           className="bg-gradient-primary"
@@ -118,13 +149,16 @@ export default function Users() {
             onSearchChange={setSearchTerm}
           />
 
-          {/* Users Table */}
-          <UserTable
-            users={filteredUsers}
-            onEdit={handleEdit}
-            onView={handleView}
-            onDelete={handleDelete}
-          />
+          {/* Enhanced User Table with Restore functionality */}
+          <div className="rounded-md border border-border">
+            <UserTable
+              users={filteredUsers}
+              onEdit={handleEdit}
+              onView={handleView}
+              onDelete={handleDelete}
+              onRestore={handleRestore}
+            />
+          </div>
 
           {filteredUsers.length === 0 && (
             <div className="text-center py-8">
@@ -149,6 +183,17 @@ export default function Users() {
         title="Supprimer cet utilisateur"
         description="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
         isLoading={deleteMutation.isPending}
+      />
+
+      <RestoreModal
+        isOpen={restoreModal.isOpen}
+        onClose={() => setRestoreModal({ isOpen: false })}
+        onConfirm={confirmRestore}
+        title="Restaurer cet utilisateur"
+        description="Êtes-vous sûr de vouloir restaurer cet utilisateur ?"
+        entityType="Utilisateur"
+        entityCode={restoreModal.user?.email || ""}
+        isLoading={restoreMutation.isPending}
       />
     </div>
   )

@@ -31,20 +31,61 @@ import {
   Eye,
   UserCheck,
   UserX,
-  BookOpen
+  BookOpen,
+  RotateCcw
 } from "lucide-react"
-
-// Données de test pour les enfants
-const children = [
-  { id: 1, name: "Sophie Martin", age: 8, class: "CM1", parentName: "Marie Dupont", status: "Présent" },
-  { id: 2, name: "Lucas Bernard", age: 6, class: "CP", parentName: "Sophie Bernard", status: "Récupéré" },
-  { id: 3, name: "Emma Leroy", age: 9, class: "CM2", parentName: "Thomas Leroy", status: "Présent" },
-  { id: 4, name: "Noah Dubois", age: 7, class: "CE1", parentName: "Anna Dubois", status: "Absent" },
-  { id: 5, name: "Chloé Moreau", age: 8, class: "CE2", parentName: "Pierre Moreau", status: "Présent" },
-]
+import { childService, Child } from "@/lib/api"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { ChildModal } from "@/components/modals/ChildModal"
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { RestoreModal } from "@/components/modals/RestoreModal"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Children() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    mode: "create" | "edit" | "view"
+    child?: Child
+  }>({ isOpen: false, mode: "create" })
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    child?: Child
+  }>({ isOpen: false })
+  const [restoreModal, setRestoreModal] = useState<{
+    isOpen: boolean
+    child?: Child
+  }>({ isOpen: false })
+
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+
+  const { data: children = [], isLoading, error } = useQuery({
+    queryKey: ['children'],
+    queryFn: childService.getAll,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: childService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['children'] })
+      toast({ title: "Enfant supprimé avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" })
+    },
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: childService.restore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['children'] })
+      toast({ title: "Enfant restauré avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la restauration", variant: "destructive" })
+    },
+  })
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -55,11 +96,57 @@ export default function Children() {
     return <Badge className={colors[status as keyof typeof colors] || "bg-muted text-muted-foreground"}>{status}</Badge>
   }
 
-  const filteredChildren = children.filter(child =>
-    child.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    child.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    child.parentName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredChildren = children.filter((child: Child) =>
+    child.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    child.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    child.class?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleEdit = (child: Child) => {
+    setModalState({ isOpen: true, mode: "edit", child })
+  }
+
+  const handleView = (child: Child) => {
+    setModalState({ isOpen: true, mode: "view", child })
+  }
+
+  const handleDelete = (child: Child) => {
+    setDeleteModal({ isOpen: true, child })
+  }
+
+  const handleRestore = (child: Child) => {
+    setRestoreModal({ isOpen: true, child })
+  }
+
+  const confirmDelete = () => {
+    if (deleteModal.child) {
+      deleteMutation.mutate(deleteModal.child.id)
+      setDeleteModal({ isOpen: false })
+    }
+  }
+
+  const confirmRestore = () => {
+    if (restoreModal.child) {
+      restoreMutation.mutate(restoreModal.child.code)
+      setRestoreModal({ isOpen: false })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Chargement...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-destructive">Erreur lors du chargement des enfants</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -69,7 +156,10 @@ export default function Children() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des Enfants</h1>
           <p className="text-muted-foreground">Gérez tous les enfants inscrits</p>
         </div>
-        <Button className="bg-gradient-primary">
+        <Button 
+          className="bg-gradient-primary"
+          onClick={() => setModalState({ isOpen: true, mode: "create" })}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Ajouter un enfant
         </Button>
@@ -98,7 +188,7 @@ export default function Children() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {children.filter(c => c.status === "Présent").length}
+              {children.filter((c: Child) => c.status === "Présent").length}
             </div>
           </CardContent>
         </Card>
@@ -112,7 +202,7 @@ export default function Children() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {children.filter(c => c.status === "Absent").length}
+              {children.filter((c: Child) => c.status === "Absent").length}
             </div>
           </CardContent>
         </Card>
@@ -126,7 +216,7 @@ export default function Children() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {children.filter(c => c.status === "Récupéré").length}
+              {children.filter((c: Child) => c.status === "Récupéré").length}
             </div>
           </CardContent>
         </Card>
@@ -145,7 +235,7 @@ export default function Children() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input 
-                placeholder="Rechercher par nom, classe ou parent..." 
+                placeholder="Rechercher par nom ou classe..." 
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -162,23 +252,27 @@ export default function Children() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Âge</TableHead>
+                  <TableHead>Genre</TableHead>
+                  <TableHead>Date de naissance</TableHead>
                   <TableHead>Classe</TableHead>
-                  <TableHead>Parent</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredChildren.map((child) => (
+                {filteredChildren.map((child: Child) => (
                   <TableRow key={child.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{child.name}</TableCell>
-                    <TableCell>{child.age} ans</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{child.class}</Badge>
+                    <TableCell className="font-medium">
+                      {child.first_name} {child.last_name}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{child.parentName}</TableCell>
-                    <TableCell>{getStatusBadge(child.status)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{child.gender === "M" ? "Masculin" : "Féminin"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{child.date_of_birth}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{child.class || "N/A"}</Badge>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(child.status || "Présent")}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -188,16 +282,20 @@ export default function Children() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover border-border">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleView(child)}>
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(child)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive">
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleRestore(child)}>
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Restaurer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(child)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Supprimer
                           </DropdownMenuItem>
@@ -217,6 +315,34 @@ export default function Children() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <ChildModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, mode: "create" })}
+        child={modalState.child}
+        mode={modalState.mode}
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Supprimer cet enfant"
+        description="Êtes-vous sûr de vouloir supprimer cet enfant ? Cette action est irréversible."
+        isLoading={deleteMutation.isPending}
+      />
+
+      <RestoreModal
+        isOpen={restoreModal.isOpen}
+        onClose={() => setRestoreModal({ isOpen: false })}
+        onConfirm={confirmRestore}
+        title="Restaurer cet enfant"
+        description="Êtes-vous sûr de vouloir restaurer cet enfant ?"
+        entityType="Enfant"
+        entityCode={restoreModal.child?.code || ""}
+        isLoading={restoreMutation.isPending}
+      />
     </div>
   )
 }

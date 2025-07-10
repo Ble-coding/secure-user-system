@@ -20,15 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { 
-  Heart, 
+  UserCheck, 
   Plus, 
   Search, 
   Filter,
@@ -36,26 +29,31 @@ import {
   Edit,
   Trash2,
   Eye,
-  UserCheck,
-  UserX,
-  Phone,
-  QrCode
+  Users,
+  Clock,
+  CheckCircle,
+  XCircle,
+  RotateCcw
 } from "lucide-react"
 import { recuperatorService, Recuperator } from "@/lib/api"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { RecuperatorModal } from "@/components/modals/RecuperatorModal"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { RestoreModal } from "@/components/modals/RestoreModal"
 import { useToast } from "@/hooks/use-toast"
 
 export default function Recuperators() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     mode: "create" | "edit" | "view"
     recuperator?: Recuperator
   }>({ isOpen: false, mode: "create" })
   const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    recuperator?: Recuperator
+  }>({ isOpen: false })
+  const [restoreModal, setRestoreModal] = useState<{
     isOpen: boolean
     recuperator?: Recuperator
   }>({ isOpen: false })
@@ -79,21 +77,32 @@ export default function Recuperators() {
     },
   })
 
+  const restoreMutation = useMutation({
+    mutationFn: recuperatorService.restore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recuperators'] })
+      toast({ title: "Récupérateur restauré avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la restauration", variant: "destructive" })
+    },
+  })
+
   const getStatusBadge = (status: string) => {
-    return status === "Actif" 
-      ? <Badge className="bg-success text-success-foreground">Actif</Badge>
-      : <Badge variant="secondary">Inactif</Badge>
+    const colors = {
+      "Actif": "bg-success text-success-foreground",
+      "Inactif": "bg-destructive text-destructive-foreground",
+      "En attente": "bg-warning text-warning-foreground"
+    }
+    return <Badge className={colors[status as keyof typeof colors] || "bg-muted text-muted-foreground"}>{status}</Badge>
   }
 
-  const filteredRecuperators = recuperators.filter((recuperator: Recuperator) => {
-    const fullName = `${recuperator.first_name} ${recuperator.last_name}`.toLowerCase()
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
-      recuperator.phone.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = statusFilter === "all" || recuperator.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const filteredRecuperators = recuperators.filter((recuperator: Recuperator) =>
+    recuperator.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    recuperator.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    recuperator.relation_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    recuperator.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const handleEdit = (recuperator: Recuperator) => {
     setModalState({ isOpen: true, mode: "edit", recuperator })
@@ -107,10 +116,21 @@ export default function Recuperators() {
     setDeleteModal({ isOpen: true, recuperator })
   }
 
+  const handleRestore = (recuperator: Recuperator) => {
+    setRestoreModal({ isOpen: true, recuperator })
+  }
+
   const confirmDelete = () => {
     if (deleteModal.recuperator) {
       deleteMutation.mutate(deleteModal.recuperator.id)
       setDeleteModal({ isOpen: false })
+    }
+  }
+
+  const confirmRestore = () => {
+    if (restoreModal.recuperator) {
+      restoreMutation.mutate(restoreModal.recuperator.code)
+      setRestoreModal({ isOpen: false })
     }
   }
 
@@ -136,7 +156,7 @@ export default function Recuperators() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Gestion des Récupérateurs</h1>
-          <p className="text-muted-foreground">Gérez les personnes autorisées à récupérer les enfants</p>
+          <p className="text-muted-foreground">Gérez tous les récupérateurs autorisés</p>
         </div>
         <Button 
           className="bg-gradient-primary"
@@ -154,7 +174,7 @@ export default function Recuperators() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Récupérateurs
             </CardTitle>
-            <Heart className="h-4 w-4 text-primary" />
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{recuperators.length}</div>
@@ -164,9 +184,9 @@ export default function Recuperators() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Récupérateurs Actifs
+              Actifs
             </CardTitle>
-            <UserCheck className="h-4 w-4 text-success" />
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -178,13 +198,13 @@ export default function Recuperators() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Récupérateurs Inactifs
+              En attente
             </CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {recuperators.filter((r: Recuperator) => r.status === "Inactif").length}
+              {recuperators.filter((r: Recuperator) => !r.is_active).length}
             </div>
           </CardContent>
         </Card>
@@ -192,13 +212,13 @@ export default function Recuperators() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Autorisations Totales
+              Inactifs
             </CardTitle>
-            <Plus className="h-4 w-4 text-info" />
+            <XCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {recuperators.reduce((total: number, recuperator: Recuperator) => total + recuperator.authorizedChildren.length, 0)}
+              {recuperators.filter((r: Recuperator) => r.status === "Inactif").length}
             </div>
           </CardContent>
         </Card>
@@ -217,23 +237,16 @@ export default function Recuperators() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input 
-                placeholder="Rechercher par nom ou téléphone..." 
+                placeholder="Rechercher par nom, relation ou téléphone..." 
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filtrer par statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="Actif">Actif</SelectItem>
-                <SelectItem value="Inactif">Inactif</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button variant="outline">
+              <Filter className="w-4 h-4 mr-2" />
+              Filtres
+            </Button>
           </div>
 
           <div className="rounded-md border border-border">
@@ -241,8 +254,9 @@ export default function Recuperators() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Enfants Autorisés</TableHead>
+                  <TableHead>Téléphone</TableHead>
+                  <TableHead>Relation</TableHead>
+                  <TableHead>Enfants autorisés</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -250,21 +264,17 @@ export default function Recuperators() {
               <TableBody>
                 {filteredRecuperators.map((recuperator: Recuperator) => (
                   <TableRow key={recuperator.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{`${recuperator.first_name} ${recuperator.last_name}`}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="text-muted-foreground flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {recuperator.phone}
-                        </div>
-                      </div>
+                    <TableCell className="font-medium">
+                      {recuperator.first_name} {recuperator.last_name}
                     </TableCell>
+                    <TableCell className="text-muted-foreground">{recuperator.phone}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {recuperator.authorizedChildren.length} enfant{recuperator.authorizedChildren.length > 1 ? 's' : ''}
-                      </Badge>
+                      <Badge variant="outline">{recuperator.relation_type}</Badge>
                     </TableCell>
-                    <TableCell>{getStatusBadge(recuperator.status)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {recuperator.authorizedChildren?.length || 0} enfant(s)
+                    </TableCell>
+                    <TableCell>{getStatusBadge(recuperator.status || (recuperator.is_active ? "Actif" : "En attente"))}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -278,15 +288,15 @@ export default function Recuperators() {
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
-                            <QrCode className="mr-2 h-4 w-4" />
-                            Générer QR Code
-                          </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(recuperator)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleRestore(recuperator)}>
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Restaurer
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(recuperator)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Supprimer
@@ -323,6 +333,17 @@ export default function Recuperators() {
         title="Supprimer ce récupérateur"
         description="Êtes-vous sûr de vouloir supprimer ce récupérateur ? Cette action est irréversible."
         isLoading={deleteMutation.isPending}
+      />
+
+      <RestoreModal
+        isOpen={restoreModal.isOpen}
+        onClose={() => setRestoreModal({ isOpen: false })}
+        onConfirm={confirmRestore}
+        title="Restaurer ce récupérateur"
+        description="Êtes-vous sûr de vouloir restaurer ce récupérateur ?"
+        entityType="Récupérateur"
+        entityCode={restoreModal.recuperator?.code || ""}
+        isLoading={restoreMutation.isPending}
       />
     </div>
   )
