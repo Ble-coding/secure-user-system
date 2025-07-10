@@ -243,7 +243,7 @@ export default function Users() {
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>{getStatusBadge(user.status || "Actif")}</TableCell>
-                    <TableCell className="text-muted-foreground">{user.last_login || "N/A"}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.lastLogin || "N/A"}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
