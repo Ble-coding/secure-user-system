@@ -1,4 +1,5 @@
 
+import { useState } from "react"
 import { 
   BarChart3, 
   Users, 
@@ -12,7 +13,8 @@ import {
   Shield,
   LogOut,
   Home,
-  MessageSquare
+  MessageSquare,
+  Search
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
 
 const mainItems = [
   { title: "Tableau de bord", url: "/", icon: Home },
@@ -58,6 +61,7 @@ export function AppSidebar() {
   const location = useLocation()
   const currentPath = location.pathname
   const collapsed = state === "collapsed"
+  const [searchTerm, setSearchTerm] = useState("")
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -65,6 +69,18 @@ export function AppSidebar() {
       ? "bg-primary text-primary-foreground font-medium shadow-sm" 
       : "hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
     }`
+
+  // Fonction pour filtrer les éléments selon le terme de recherche
+  const filterItems = (items: typeof mainItems) => {
+    if (!searchTerm) return items
+    return items.filter(item => 
+      item.title.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }
+
+  const filteredMainItems = filterItems(mainItems)
+  const filteredToolItems = filterItems(toolItems)
+  const filteredSettingsItems = filterItems(settingsItems)
 
   return (
     <Sidebar className={`${collapsed ? "w-14" : "w-64"} border-r border-sidebar-border bg-sidebar shadow-card-custom`}>
@@ -88,13 +104,28 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
+        {/* Barre de recherche */}
+        {!collapsed && (
+          <div className="mb-4 px-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-8 text-sm bg-sidebar-accent/50 border-sidebar-border placeholder:text-sidebar-foreground/60"
+              />
+            </div>
+          </div>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className={collapsed ? "sr-only" : "text-sidebar-foreground/70"}>
             Gestion Principale
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {filteredMainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
                     <NavLink to={item.url} end className={getNavCls}>
@@ -114,7 +145,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {toolItems.map((item) => (
+              {filteredToolItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavCls}>
@@ -134,7 +165,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {settingsItems.map((item) => (
+              {filteredSettingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavCls}>

@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -21,10 +21,8 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { ParentUser, parentService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -72,27 +70,7 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
 
   const form = useForm<ParentFormData>({
     resolver: zodResolver(parentSchema),
-    defaultValues: parent ? {
-      nom: parent.nom || "",
-      prenom: parent.prenom || "",
-      email: parent.email || "",
-      telephone: parent.telephone || "",
-      children: parent.children?.map(child => ({
-        first_name: child.first_name,
-        last_name: child.last_name,
-        gender: child.gender as "M" | "F",
-        date_of_birth: child.date_of_birth,
-        class: child.class || "",
-        enrolled_at: child.enrolled_at || "",
-      })) || [],
-      recuperator: {
-        first_name: "",
-        last_name: "",
-        phone: "",
-        relation_type: "",
-        document_type: "",
-      },
-    } : {
+    defaultValues: {
       nom: "",
       prenom: "",
       email: "",
@@ -120,19 +98,87 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
     name: "children"
   })
 
+  useEffect(() => {
+    const errors = form.formState.errors
+    if (Object.keys(errors).length > 0) {
+      console.warn("❌ Erreurs de validation", errors)
+    }
+  }, [form.formState.errors])
+
+  useEffect(() => {
+    if (isOpen) {
+      if (parent && mode !== "create") {
+        form.reset({
+          nom: parent.nom || "",
+          prenom: parent.prenom || "",
+          email: parent.email || "",
+          telephone: parent.telephone || "",
+          children: parent.children?.map(child => ({
+            first_name: child.first_name,
+            last_name: child.last_name,
+            gender: child.gender as "M" | "F",
+            date_of_birth: child.date_of_birth,
+            class: child.class || "",
+            enrolled_at: child.enrolled_at || "",
+          })) || [{ 
+            first_name: "", 
+            last_name: "", 
+            gender: "M" as const, 
+            date_of_birth: "",
+            class: "",
+            enrolled_at: "",
+          }],
+          recuperator: {
+            first_name: "",
+            last_name: "",
+            phone: "",
+            relation_type: "",
+            document_type: "",
+          },
+        })
+      } else {
+        form.reset({
+          nom: "",
+          prenom: "",
+          email: "",
+          telephone: "",
+          children: [{ 
+            first_name: "", 
+            last_name: "", 
+            gender: "M" as const, 
+            date_of_birth: "",
+            class: "",
+            enrolled_at: "",
+          }],
+          recuperator: {
+            first_name: "",
+            last_name: "",
+            phone: "",
+            relation_type: "",
+            document_type: "",
+          },
+        })
+      }
+    }
+  }, [isOpen, parent, mode, form])
+
   const createMutation = useMutation({
     mutationFn: (formData: FormData) => parentService.create(formData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents'] })
+      queryClient.invalidateQueries({
+        queryKey: ['parents'],
+        exact: false,
+      })
       toast({ title: "Parent créé avec succès" })
       form.reset()
       onClose()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { message?: string }
       console.error('Error creating parent:', error)
       toast({ 
         title: "Erreur lors de la création", 
-        description: error.message || "Une erreur est survenue",
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
       })
     },
@@ -142,15 +188,20 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
     mutationFn: ({ id, data }: { id: number; data: FormData }) =>
       parentService.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents'] })
+      queryClient.invalidateQueries({
+        queryKey: ['parents'],
+        exact: false,
+      })
       toast({ title: "Parent modifié avec succès" })
+      form.reset()
       onClose()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { message?: string }
       console.error('Error updating parent:', error)
       toast({ 
         title: "Erreur lors de la modification", 
-        description: error.message || "Une erreur est survenue",
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
       })
     },
@@ -186,9 +237,12 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
       }
     }
 
+    console.log([...formData.entries()])
+    
     if (mode === "create") {
       createMutation.mutate(formData)
     } else if (mode === "edit" && parent) {
+      console.log("🔧 En mode édition, updateMutation envoyé")
       updateMutation.mutate({ id: parent.id, data: formData })
     }
   }

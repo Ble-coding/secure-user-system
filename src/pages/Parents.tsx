@@ -405,7 +405,6 @@ export default function Parents() {
         onClose={() => setModalState({ isOpen: false, mode: "create" })}
         parent={modalState.parent}
         mode={modalState.mode}
-        onCreateSuccess={handleCreateSuccess}
       />
 
       <DeleteConfirmModal
