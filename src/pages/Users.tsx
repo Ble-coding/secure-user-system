@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { RestoreModal } from "@/components/modals/RestoreModal"
 import { 
   Table,
   TableBody,
@@ -29,6 +30,7 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  RotateCcw,
   Eye,
   UserCheck,
   UserX
@@ -57,7 +59,10 @@ export default function Users() {
     isOpen: boolean
     user?: User
   }>({ isOpen: false })
-
+  const [restoreModal, setRestoreModal] = useState<{
+    isOpen: boolean
+    user?: User
+  }>({ isOpen: false })
 
 
   const { toast } = useToast()
@@ -119,6 +124,17 @@ useEffect(() => {
     },
   })
 
+    const restoreMutation = useMutation({
+    mutationFn: userService.restore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast({ title: "Utilisateur restauré avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la restauration", variant: "destructive" })
+    },
+  })
+
   const getStatusBadge = (status: string) => {
     return status === "Actif" 
       ? <Badge className="bg-success text-success-foreground">Actif</Badge>
@@ -154,11 +170,22 @@ useEffect(() => {
   const handleDelete = (user: User) => {
     setDeleteModal({ isOpen: true, user })
   }
+ const handleRestore = (user: User) => {
+    setRestoreModal({ isOpen: true, user })
+  }
 
   const confirmDelete = () => {
     if (deleteModal.user) {
       deleteMutation.mutate(deleteModal.user.id)
       setDeleteModal({ isOpen: false })
+    }
+  }
+
+    const confirmRestore = () => {
+    if (restoreModal.user) {
+      // Assumons que l'user a un code ou utilisons l'id comme identifiant
+      restoreMutation.mutate(restoreModal.user.id)
+      setRestoreModal({ isOpen: false })
     }
   }
 
@@ -186,7 +213,11 @@ useEffect(() => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Gestion des Utilisateurs</h1>
-          <p className="text-muted-foreground">Gérez tous les utilisateurs du système</p>
+          <p className="text-muted-foreground">Gérez tous les utilisateurs du système
+            - 
+            {users.find((u: User) => u.role === "Admin")?.name || "Administrateur"} connecté
+
+          </p>
         </div>
         <Button 
           className="bg-gradient-primary"
@@ -341,11 +372,18 @@ useEffect(() => {
                             <Edit className="mr-2 h-4 w-4" />
                             Modifier
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(user)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
+                         {user.status === "Inactif" ? (
+  <DropdownMenuItem onClick={() => handleRestore(user)}>
+    <RotateCcw className="mr-2 h-4 w-4" />
+    Restaurer
+  </DropdownMenuItem>
+) : (
+  <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(user)}>
+    <Trash2 className="mr-2 h-4 w-4" />
+    Supprimer
+  </DropdownMenuItem>
+)}
+
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -403,6 +441,17 @@ useEffect(() => {
         title="Supprimer cet utilisateur"
         description="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
         isLoading={deleteMutation.isPending}
+      />
+
+            <RestoreModal
+        isOpen={restoreModal.isOpen}
+        onClose={() => setRestoreModal({ isOpen: false })}
+        onConfirm={confirmRestore}
+        title="Restaurer cet utilisateur"
+        description="Êtes-vous sûr de vouloir restaurer cet utilisateur ?"
+        entityType="Utilisateur"
+        entityCode={restoreModal.user?.email || ""}
+        isLoading={restoreMutation.isPending}
       />
     </div>
   )

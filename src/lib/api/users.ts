@@ -62,4 +62,13 @@ export const userService = {
     apiRequest<ApiResponse<null>>(`/users-management/users-management/${id}`, {
       method: 'DELETE',
     }),
+
+      restore: (id: string) =>
+    apiRequest<ApiResponse<User>>(`/users-management/users-management/${id}/restore`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      }
+    }),
 }

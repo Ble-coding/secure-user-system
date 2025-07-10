@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { BASE_URL } from "@/lib/api/config"
 import * as z from "zod"
 import {
   Dialog,
@@ -27,15 +28,8 @@ import { agentService } from "@/lib/api/agents"
 import { useToast } from "@/hooks/use-toast"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-const agentSchema = z.object({
-  first_name: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
-  last_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.string().email("Email invalide"),
-  phone: z.string().min(10, "Numéro de téléphone invalide"),
-  type: z.string().min(1, "Type d'agent requis"),
-})
 
-type AgentFormData = z.infer<typeof agentSchema>
+
 
 interface AgentModalProps {
   isOpen: boolean
@@ -48,22 +42,44 @@ interface AgentModalProps {
 export function AgentModal({ isOpen, onClose, agent, mode, onCreateSuccess }: AgentModalProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const isReadOnly = mode === "view"
+  
 
-  const form = useForm<AgentFormData>({
+  const agentSchema = z.object({
+    first_name: z.string().min(2, "Le prénom est requis"),
+    last_name: z.string().min(2, "Le nom est requis"),
+    email: z.string().email("Email invalide"),
+    phone: z.string().min(10, "Téléphone invalide"),
+    type: z.string().min(1, "Type d'agent requis"),
+    ville: z.string().optional(),
+    sexe: z.enum(["M", "F"], { required_error: "Le sexe est requis" }),
+    date_naissance: z.string().optional(),
+    document_type: z.string().min(1, "Type de document requis"),
+    document_file: mode === "create"
+      ? z.any().refine((file) => file instanceof File, {
+          message: "Le fichier du document est requis"
+        })
+      : z.any().optional()
+  })
+
+type AgentFormData = z.infer<typeof agentSchema>
+const isSexeValid = (val: unknown): val is "M" | "F" => val === "M" || val === "F"
+
+
+ const form = useForm<AgentFormData>({
     resolver: zodResolver(agentSchema),
-    defaultValues: agent ? {
-      first_name: agent.first_name || "",
-      last_name: agent.last_name || "",
-      email: agent.email || "",
-      phone: agent.phone || "",
-      type: agent.type || "",
-    } : {
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      type: "",
-    },
+    defaultValues: {
+      first_name: agent?.first_name || "",
+      last_name: agent?.last_name || "",
+      email: agent?.email || "",
+      phone: agent?.phone || "",
+      type: agent?.type || "",
+      ville: agent?.ville || "",
+      sexe: isSexeValid(agent?.sexe) ? agent.sexe : undefined,
+      date_naissance: agent?.date_naissance || "",
+      document_type: agent?.document_type || "",
+      document_file: undefined,
+    }
   })
 
   const createMutation = useMutation({
@@ -75,56 +91,62 @@ export function AgentModal({ isOpen, onClose, agent, mode, onCreateSuccess }: Ag
       onClose()
       onCreateSuccess?.()
     },
-    onError: (error: any) => {
-      console.error('Error creating agent:', error)
+    onError: (error: unknown) => {
+      const err = error as { message?: string };
+      console.error('Error creating agent:', error);
       toast({ 
         title: "Erreur lors de la création", 
-        description: error.message || "Une erreur est survenue",
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
-      })
+      });
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: FormData }) =>
+   mutationFn: ({ id, data }: { id: string; data: FormData }) =>
       agentService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       toast({ title: "Agent modifié avec succès" })
       onClose()
     },
-    onError: (error: any) => {
-      console.error('Error updating agent:', error)
+   onError: (error: unknown) => {
+      const err = error as { message?: string };
+      console.error('Error creating agent:', error);
       toast({ 
-        title: "Erreur lors de la modification", 
-        description: error.message || "Une erreur est survenue",
+        title: "Erreur lors de la création", 
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
-      })
+      });
     },
   })
 
-  const onSubmit = (data: AgentFormData) => {
-    const formData = new FormData()
-    formData.append('first_name', data.first_name)
-    formData.append('last_name', data.last_name)
-    formData.append('email', data.email)
-    formData.append('phone', data.phone)
-    formData.append('type', data.type)
-    formData.append('code', `AG-${Date.now()}`)
-    formData.append('status', 'En service')
-
-    if (mode === "create") {
-      createMutation.mutate(formData)
-    } else if (mode === "edit" && agent) {
-      updateMutation.mutate({ id: agent.id, data: formData })
-    }
+const onSubmit = (data: AgentFormData) => {
+  const formData = new FormData()
+  formData.append('first_name', data.first_name)
+  formData.append('last_name', data.last_name)
+  formData.append('email', data.email)
+  formData.append('phone', data.phone)
+  formData.append('type', data.type)
+  if (data.ville) formData.append('ville', data.ville)
+  if (data.sexe) formData.append('sexe', data.sexe)
+  if (data.date_naissance) formData.append('date_naissance', data.date_naissance)
+  formData.append('document_type', data.document_type)
+  if (data.document_file instanceof File) {
+    formData.append('document_file', data.document_file)
   }
 
-  const isReadOnly = mode === "view"
+  if (mode === "create") {
+    createMutation.mutate(formData)
+  } else if (mode === "edit" && agent) {
+    updateMutation.mutate({ id: agent.code, data: formData })
+  }
+}
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" && "Ajouter un agent"}
@@ -169,7 +191,7 @@ export function AgentModal({ isOpen, onClose, agent, mode, onCreateSuccess }: Ag
                 )}
               />
             </div>
-
+      
             <FormField
               control={form.control}
               name="email"
@@ -197,14 +219,15 @@ export function AgentModal({ isOpen, onClose, agent, mode, onCreateSuccess }: Ag
                 </FormItem>
               )}
             />
-
+  <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type d'agent</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isReadOnly}>
+              <Select onValueChange={field.onChange} defaultValue={field.value}  disabled={isReadOnly}>
+
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner le type d'agent" />
@@ -221,6 +244,118 @@ export function AgentModal({ isOpen, onClose, agent, mode, onCreateSuccess }: Ag
                 </FormItem>
               )}
             />
+<FormField
+  control={form.control}
+  name="date_naissance"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Date de naissance</FormLabel>
+      <FormControl>
+        <Input
+          type="date"
+          {...field}
+          disabled={isReadOnly}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+</div>
+
+            <FormField
+  control={form.control}
+  name="ville"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Ville</FormLabel>
+      <FormControl>
+        <Input {...field} disabled={isReadOnly} />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+  <div className="grid grid-cols-2 gap-4">
+<FormField
+  control={form.control}
+  name="sexe"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Sexe</FormLabel>
+<Select onValueChange={field.onChange} defaultValue={field.value}  disabled={isReadOnly}>
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionner le sexe" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          <SelectItem value="M">Masculin</SelectItem>
+          <SelectItem value="F">Féminin</SelectItem>
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+<FormField
+  control={form.control}
+  name="document_type"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Type de document</FormLabel>
+<Select onValueChange={field.onChange} defaultValue={field.value}  disabled={isReadOnly}>
+
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionner un type" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          <SelectItem value="CNI">Carte Nationale d’Identité</SelectItem>
+          <SelectItem value="PASSPORT">Passeport</SelectItem>
+          <SelectItem value="PERMIS">Permis de conduire</SelectItem>
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>  </div>
+
+<FormField
+  control={form.control}
+  name="document_file"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Fichier du document</FormLabel>
+      <FormControl>
+        <div className="space-y-2">
+          {mode !== "create" && typeof agent?.document_file === "string" && agent.document_file && (
+            <a
+              href={`${BASE_URL}/storage/${agent.document_file}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline text-sm"
+            >
+              Voir le document actuel
+            </a>
+          )}
+          <Input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+   onChange={(e) => field.onChange(e.target.files?.[0])} />
+
+        </div>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+
+
 
             {!isReadOnly && (
               <DialogFooter>

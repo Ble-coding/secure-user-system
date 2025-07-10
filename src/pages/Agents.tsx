@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { RestoreModal } from "@/components/modals/RestoreModal"
 import { 
   Table,
   TableBody,
@@ -29,6 +30,7 @@ import {
   Edit,
   Trash2,
   Eye,
+    RotateCcw,
   Shield,
   Activity,
   UserX
@@ -44,6 +46,10 @@ import { useToast } from "@/hooks/use-toast"
 export default function Agents() {
   const [searchTerm, setSearchTerm] = useState("")
   const [page, setPage] = useState(1)
+  
+  const handleCreateSuccess = () => {
+    setPage(1)
+  }
   const [statusFilter, setStatusFilter] = useState("")
   const [modalState, setModalState] = useState<{
     isOpen: boolean
@@ -54,6 +60,12 @@ export default function Agents() {
     isOpen: boolean
     agent?: Agent
   }>({ isOpen: false })
+   const [restoreModal, setRestoreModal] = useState<{
+      isOpen: boolean
+          agent?: Agent
+    }>({ isOpen: false })
+  
+  
 
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -75,16 +87,13 @@ export default function Agents() {
     })
   }, [page, queryClient])
 
-  const handleCreateSuccess = () => {
-    setPage(1)
-  }
 
   const agents = response?.data?.agents ?? []
   const newThisMonth = response?.data?.new_this_month ?? 0
   const totalEnService = response?.data?.total_en_service ?? 0
   const totalHorsService = response?.data?.total_hors_service ?? 0
-  const totalEnPause = response?.data?.total_en_pause ?? 0
-  const totalAgents = totalEnService + totalHorsService + totalEnPause
+  // const totalEnPause = response?.data?.total_en_pause ?? 0
+  const totalAgents = totalEnService + totalHorsService 
 
   const pagination = {
     currentPage: response?.data?.current_page ?? 1,
@@ -94,21 +103,34 @@ export default function Agents() {
   }
 
   const deleteMutation = useMutation({
-    mutationFn: agentService.delete,
+    mutationFn: (code: string) => agentService.delete(code),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] })
-      toast({ title: "Agent supprimé avec succès" })
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      toast({ title: "Agent supprimé avec succès" });
     },
     onError: () => {
-      toast({ title: "Erreur lors de la suppression", variant: "destructive" })
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
     },
-  })
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (code: string) => agentService.restore(code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      toast({ title: "Agent restauré avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la restauration", variant: "destructive" })
+    },
+  });
+
+  
+
 
   const getStatusBadge = (status: string) => {
     const colors = {
       "En service": "bg-success text-success-foreground",
       "Hors service": "bg-destructive text-destructive-foreground",
-      "En pause": "bg-warning text-warning-foreground"
     }
     return <Badge className={colors[status as keyof typeof colors] || "bg-muted text-muted-foreground"}>{status}</Badge>
   }
@@ -145,12 +167,27 @@ export default function Agents() {
     setDeleteModal({ isOpen: true, agent })
   }
 
+  const handleRestore = (agent: Agent) => {
+      setRestoreModal({ isOpen: true, agent })
+    }
+
   const confirmDelete = () => {
     if (deleteModal.agent) {
-      deleteMutation.mutate(deleteModal.agent.id)
+      deleteMutation.mutate(deleteModal.agent.code)
       setDeleteModal({ isOpen: false })
     }
   }
+
+  
+    const confirmRestore = () => {
+    if (restoreModal.agent) {
+      // Assumons que l'user a un code ou utilisons le code comme identifiant
+      restoreMutation.mutate(restoreModal.agent.code)
+      setRestoreModal({ isOpen: false })
+    }
+  }
+
+
 
   if (error) {
     return (
@@ -217,13 +254,13 @@ export default function Agents() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              En Pause
-            </CardTitle>
-            <Shield className="h-4 w-4 text-warning" />
+             <CardTitle className="text-sm font-medium text-muted-foreground">
+            Nouveaux ce mois
+          </CardTitle>
+          <Plus className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{totalEnPause}</div>
+            <div className="text-2xl font-bold text-foreground">{newThisMonth}</div>
           </CardContent>
         </Card>
       </div>
@@ -276,12 +313,6 @@ export default function Agents() {
                 }}>
                   Hors service
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setStatusFilter("En pause")
-                  setPage(1)
-                }}>
-                  En pause
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -299,7 +330,7 @@ export default function Agents() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAgents.map((agent: Agent) => (
+                {agents.map((agent: Agent) => (
                   <TableRow key={agent.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       {agent.first_name} {agent.last_name}
@@ -333,10 +364,19 @@ export default function Agents() {
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(agent)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
+                          {agent.status === "Hors Service" ? (
+                            <DropdownMenuItem onClick={() => handleRestore(agent)}>
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              Restaurer
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(agent)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          )}
+
+
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -394,6 +434,17 @@ export default function Agents() {
         description="Êtes-vous sûr de vouloir supprimer cet agent ? Cette action est irréversible."
         isLoading={deleteMutation.isPending}
       />
+
+            <RestoreModal
+              isOpen={restoreModal.isOpen}
+              onClose={() => setRestoreModal({ isOpen: false })}
+              onConfirm={confirmRestore}
+              title="Restaurer cet agent"
+              description="Êtes-vous sûr de vouloir restaurer cet agent ?"
+              entityType="Agent"
+              entityCode={restoreModal.agent?.email || ""}
+              isLoading={restoreMutation.isPending}
+            />
     </div>
   )
 }

@@ -9,8 +9,8 @@ export const agentService = {
       `/users/agents?page=${page}&search=${encodeURIComponent(search)}&status=${status}`
     ),
 
-  getById: (id: number) =>
-    apiRequest<ApiResponse<Agent>>(`/users/agents/${id}`),
+  getById: (code: string) =>
+    apiRequest<ApiResponse<Agent>>(`/users/agents/${code}`),
 
   create: (agentData: FormData) =>
     apiRequest<ApiResponse<Agent>>('/users/agents', {
@@ -22,8 +22,8 @@ export const agentService = {
       },
     }),
 
-  update: (id: number, agentData: FormData) =>
-    apiRequest<ApiResponse<Agent>>(`/users/agents/${id}`, {
+  update: (code: string, agentData: FormData) =>
+    apiRequest<ApiResponse<Agent>>(`/users/agents/${code}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -36,10 +36,20 @@ export const agentService = {
       })(),
     }),
 
-  delete: (id: number) =>
-    apiRequest<ApiResponse<null>>(`/users/agents/${id}`, {
-      method: 'DELETE',
+    delete: (code: string) =>
+      apiRequest<ApiResponse<null>>(`/users/agents/${code}`, {
+        method: 'DELETE',
+      }),
+
+    restore: (code: string) =>
+    apiRequest<ApiResponse<Agent>>(`/users/agents/${encodeURIComponent(code)}/restore`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
     }),
+
 
   scanQrCode: (scanData: {
     child_id: string;
@@ -49,7 +59,7 @@ export const agentService = {
     type: 'entry' | 'exit';
     scanned_at?: string;
   }) =>
-    apiRequest<ApiResponse<any>>('/agents/scan-qr-code', {
+    apiRequest<ApiResponse<unknown>>('/agents/scan-qr-code', {
       method: 'POST',
       body: JSON.stringify(scanData),
     }),

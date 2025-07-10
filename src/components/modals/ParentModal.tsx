@@ -1,8 +1,3 @@
-
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
 import {
   Dialog,
   DialogContent,
@@ -11,30 +6,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { Form } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { ParentUser, parentService } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-
-const parentSchema = z.object({
-  nom: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  prenom: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
-  email: z.string().email("Email invalide"),
-  telephone: z.string().min(10, "Numéro de téléphone invalide"),
-  adresse: z.string().min(5, "Adresse requise"),
-})
-
-type ParentFormData = z.infer<typeof parentSchema>
+import { ParentUser } from "@/types/Parent"
+import { ParentInfoSection } from "@/components/parent/ParentInfoSection"
+import { ChildrenSection } from "@/components/parent/ChildrenSection"
+import { RecuperatorSection } from "@/components/parent/RecuperatorSection"
+import { useParentForm } from "@/components/parent/useParentForm"
 
 interface ParentModalProps {
   isOpen: boolean
@@ -44,75 +22,18 @@ interface ParentModalProps {
 }
 
 export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps) {
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
-
-  const form = useForm<ParentFormData>({
-    resolver: zodResolver(parentSchema),
-    defaultValues: parent ? {
-      nom: parent.nom || "",
-      prenom: parent.prenom || "",
-      email: parent.email || "",
-      telephone: parent.telephone || "",
-      adresse: parent.adresse || "",
-    } : {
-      nom: "",
-      prenom: "",
-      email: "",
-      telephone: "",
-      adresse: "",
-    },
+  const { form, fieldArray, onSubmit, createMutation, updateMutation } = useParentForm({
+    parent,
+    mode,
+    isOpen,
+    onClose
   })
-
-  const createMutation = useMutation({
-    mutationFn: parentService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents'] })
-      toast({ title: "Parent créé avec succès" })
-      form.reset()
-      onClose()
-    },
-    onError: (error: any) => {
-      console.error('Error creating parent:', error)
-      toast({ 
-        title: "Erreur lors de la création", 
-        description: error.message || "Une erreur est survenue",
-        variant: "destructive" 
-      })
-    },
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<ParentUser> }) =>
-      parentService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents'] })
-      toast({ title: "Parent modifié avec succès" })
-      onClose()
-    },
-    onError: (error: any) => {
-      console.error('Error updating parent:', error)
-      toast({ 
-        title: "Erreur lors de la modification", 
-        description: error.message || "Une erreur est survenue",
-        variant: "destructive" 
-      })
-    },
-  })
-
-  const onSubmit = (data: ParentFormData) => {
-    if (mode === "create") {
-      createMutation.mutate({ ...data, status: "Actif" })
-    } else if (mode === "edit" && parent) {
-      updateMutation.mutate({ id: parent.id, data })
-    }
-  }
 
   const isReadOnly = mode === "view"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" && "Ajouter un parent"}
@@ -120,84 +41,29 @@ export function ParentModal({ isOpen, onClose, parent, mode }: ParentModalProps)
             {mode === "view" && "Détails du parent"}
           </DialogTitle>
           <DialogDescription>
-            {mode === "create" && "Créer un nouveau parent dans le système"}
+            {mode === "create" && "Créer un nouveau parent avec ses enfants et éventuellement un récupérateur"}
             {mode === "edit" && "Modifier les informations du parent"}
             {mode === "view" && "Consulter les informations du parent"}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="nom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled={isReadOnly} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="prenom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prénom</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled={isReadOnly} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" {...field} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <ParentInfoSection 
+              control={form.control} 
+              isReadOnly={isReadOnly} 
             />
 
-            <FormField
-              control={form.control}
-              name="telephone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
-                  <FormControl>
-                    <Input {...field} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ChildrenSection 
+              control={form.control} 
+              fieldArray={fieldArray} 
+              isReadOnly={isReadOnly} 
             />
 
-            <FormField
-              control={form.control}
-              name="adresse"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Adresse</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <RecuperatorSection 
+              control={form.control} 
+              isReadOnly={isReadOnly}
+              mode={mode}
             />
 
             {!isReadOnly && (

@@ -1,70 +1,87 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { TableCell, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { 
-  Users as UsersIcon, 
-  Plus, 
-  UserCheck,
-  UserX
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { 
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  RotateCcw
 } from "lucide-react"
 import { User } from "@/lib/api"
 
-interface UserStatsProps {
-  users: User[]
+interface UserTableRowProps {
+  user: User
+  onEdit: (user: User) => void
+  onView: (user: User) => void
+  onDelete: (user: User) => void
+  onRestore?: (user: User) => void
 }
 
-export function UserStats({ users }: UserStatsProps) {
-  const activeUsers = users.filter((u: User) => u.status === "Actif").length
-  const inactiveUsers = users.filter((u: User) => u.status === "Inactif").length
+export function UserTableRow({ user, onEdit, onView, onDelete, onRestore }: UserTableRowProps) {
+  const getStatusBadge = (status: string) => {
+    return status === "Actif" 
+      ? <Badge className="bg-success text-success-foreground">Actif</Badge>
+      : <Badge variant="secondary">Inactif</Badge>
+  }
+
+  const getRoleBadge = (role: string) => {
+    const colors = {
+      "Admin": "bg-primary text-primary-foreground",
+      "Agent": "bg-info text-info-foreground", 
+      "Parent": "bg-warning text-warning-foreground",
+      "Récupérateur": "bg-success text-success-foreground"
+    }
+    return <Badge className={colors[role as keyof typeof colors] || "bg-muted text-muted-foreground"}>{role}</Badge>
+  }
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total Utilisateurs
-          </CardTitle>
-          <UsersIcon className="h-4 w-4 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">{users.length}</div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Utilisateurs Actifs
-          </CardTitle>
-          <UserCheck className="h-4 w-4 text-success" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">{activeUsers}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Utilisateurs Inactifs
-          </CardTitle>
-          <UserX className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">{inactiveUsers}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Nouveaux ce mois
-          </CardTitle>
-          <Plus className="h-4 w-4 text-info" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">12</div>
-        </CardContent>
-      </Card>
-    </div>
+    <TableRow className="hover:bg-muted/50">
+      <TableCell className="font-medium">{user.name}</TableCell>
+      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+      <TableCell>{getRoleBadge(user.role)}</TableCell>
+      <TableCell>{getStatusBadge(user.status || "Actif")}</TableCell>
+      <TableCell className="text-muted-foreground">{user.lastLogin || "N/A"}</TableCell>
+      <TableCell className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover border-border">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => onView(user)}>
+              <Eye className="mr-2 h-4 w-4" />
+              Voir les détails
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => onEdit(user)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Modifier
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {onRestore && (
+              <DropdownMenuItem className="cursor-pointer" onClick={() => onRestore(user)}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Restaurer
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => onDelete(user)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   )
 }

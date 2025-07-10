@@ -65,4 +65,10 @@ update: (id: number, userData: FormData) =>
     apiRequest<ApiResponse<null>>(`/users-management/users-management/${id}`, {
       method: 'DELETE',
     }),
+
+    restore: (id: number) =>
+  apiRequest<ApiResponse<null>>(`/users-management/users-management/restore/${encodeURIComponent(id)}`, {
+    method: "PUT",
+  }),
+
 }

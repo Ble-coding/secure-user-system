@@ -327,27 +327,27 @@ console.log([...formData.entries()])
                   <FormItem>
                     <FormLabel>Photo de profil</FormLabel>
              <FormControl>
-  <div className="space-y-2">
-    {mode !== "create" && typeof user?.photo === "string" && user.photo && (
-      <img
-        src={`${BASE_URL}/storage/${user.photo}`}
-        alt="Aperçu"
-        className="w-20 h-20 object-cover rounded-md border"
-        onError={(e) => {
-          e.currentTarget.style.display = "none"
-          console.warn("Erreur de chargement image :", e.currentTarget.src)
-        }}
-      />
-    )}
+                <div className="space-y-2">
+                  {mode !== "create" && typeof user?.photo === "string" && user.photo && (
+                    <img
+                      src={`${BASE_URL}/storage/${user.photo}`}
+                      alt="Aperçu"
+                      className="w-20 h-20 object-cover rounded-md border"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none"
+                        console.warn("Erreur de chargement image :", e.currentTarget.src)
+                      }}
+                    />
+                  )}
 
-    <Input
-      type="file"
-      key={photoInputKey}
-      accept="image/*"
-      onChange={(e) => field.onChange(e.target.files?.[0])}
-    />
-  </div>
-</FormControl>
+                  <Input
+                    type="file"
+                    key={photoInputKey}
+                    accept="image/*"
+                    onChange={(e) => field.onChange(e.target.files?.[0])}
+                  />
+                </div>
+              </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

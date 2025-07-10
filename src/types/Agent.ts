@@ -7,7 +7,7 @@ export interface Agent {
   email: string
   phone: string
   type: string // "enseignant", "surveillant", "sécurité", "administration"
-  status: 'En service' | 'Hors service' | 'En pause'
+  status: string
   first_login?: boolean
   date_naissance?: string
   sexe?: string
@@ -30,5 +30,5 @@ export interface PaginatedAgentResponse {
   new_this_month: number
   total_en_service: number
   total_hors_service: number
-  total_en_pause: number
+  // total_en_pause: number
 }

@@ -1,6 +1,7 @@
 
 import { apiRequest } from './config';
 import { Child } from './types';
+import { ApiResponse } from '@/types/api';
 
 export const childService = {
   getAll: () =>
@@ -24,5 +25,13 @@ export const childService = {
   delete: (id: number) =>
     apiRequest(`/users/children/${id}`, {
       method: 'DELETE',
+    }),
+    restore: (code: string) =>
+    apiRequest<ApiResponse<Child>>(`/users/children/${code}/restore`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      }
     }),
 };

@@ -1,6 +1,7 @@
 
 import { apiRequest } from './config';
 import { Recuperator } from './types';
+import { ApiResponse } from '@/types/api'
 
 export const recuperatorService = {
   getAll: () =>
@@ -24,6 +25,15 @@ export const recuperatorService = {
   delete: (id: number) =>
     apiRequest(`/users/recuperators/${id}`, {
       method: 'DELETE',
+    }),
+
+    restore: (code: string) =>
+    apiRequest<ApiResponse<Recuperator>>(`/users/recuperators/${code}/restore`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      }
     }),
 
   generateQrCode: (recuperatorId: number, childId: number) =>

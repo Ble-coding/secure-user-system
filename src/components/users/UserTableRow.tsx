@@ -14,7 +14,8 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  RotateCcw
 } from "lucide-react"
 import { User } from "@/lib/api"
 
@@ -23,9 +24,10 @@ interface UserTableRowProps {
   onEdit: (user: User) => void
   onView: (user: User) => void
   onDelete: (user: User) => void
+  onRestore?: (user: User) => void
 }
 
-export function UserTableRow({ user, onEdit, onView, onDelete }: UserTableRowProps) {
+export function UserTableRow({ user, onEdit, onView, onDelete, onRestore }: UserTableRowProps) {
   const getStatusBadge = (status: string) => {
     return status === "Actif" 
       ? <Badge className="bg-success text-success-foreground">Actif</Badge>
@@ -67,6 +69,12 @@ export function UserTableRow({ user, onEdit, onView, onDelete }: UserTableRowPro
               Modifier
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {onRestore && (
+              <DropdownMenuItem className="cursor-pointer" onClick={() => onRestore(user)}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Restaurer
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => onDelete(user)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Supprimer
