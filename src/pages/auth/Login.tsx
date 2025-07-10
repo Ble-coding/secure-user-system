@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, LogIn } from "lucide-react"
-import { authService } from "@/lib/api"
+import { authService } from "@/lib/api/auth"
 import { useToast } from "@/hooks/use-toast"
 
 const loginSchema = z.object({
@@ -40,9 +39,12 @@ export default function Login() {
         email: data.email,
         password: data.password
       })
+
+      // ✅ On stocke bien le token retourné dans localStorage
       localStorage.setItem('auth_token', response.token)
+
       toast({ title: "Connexion réussie" })
-      navigate("/")
+      navigate("/") // ou navigate("/dashboard")
     } catch (error) {
       toast({
         title: "Erreur de connexion",

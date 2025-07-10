@@ -1,5 +1,6 @@
 
 import { useState } from "react"
+import { useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +33,9 @@ import {
   UserCheck,
   UserX
 } from "lucide-react"
-import { userService, User } from "@/lib/api"
+// import { userService, User } from "@/lib/api"
+import { userService } from "@/lib/api/userService"
+import { User } from "@/lib/api/users"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { UserModal } from "@/components/modals/UserModal"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
@@ -40,6 +43,11 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [page, setPage] = useState(1)
+  const handleCreateSuccess = () => {
+  setPage(1)
+}
+  const [statusFilter, setStatusFilter] = useState("")
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     mode: "create" | "edit" | "view"
@@ -50,13 +58,55 @@ export default function Users() {
     user?: User
   }>({ isOpen: false })
 
+
+
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  
+const queryKey = ['users', page, searchTerm, statusFilter]
 
-  const { data: users = [], isLoading, error } = useQuery({
+const { data: response, isLoading, error  } = useQuery({
+  queryKey,
+  queryFn: () => userService.getAll(page, searchTerm, statusFilter),
+  staleTime: 0,
+  refetchOnMount: true,
+  refetchOnWindowFocus: false,
+})
+
+useEffect(() => {
+  queryClient.invalidateQueries({
     queryKey: ['users'],
-    queryFn: userService.getAll,
+    exact: false,
   })
+}, [page, queryClient]) // ← ✅ ajoute queryClient ici
+
+
+// const { data: response, isLoading, error } = useQuery({
+//   queryKey,
+//   queryFn: () => userService.getAll(page, searchTerm, statusFilter),
+// })
+
+
+
+
+
+
+
+  // const users = response?.data?.users ?? []
+  // const newThisMonth = response?.data?.new_this_month ?? 0
+
+  const users = response?.data?.users ?? []
+  const newThisMonth = response?.data?.new_this_month ?? 0
+  const totalActifs = response?.data?.total_actifs ?? 0
+  const totalInactifs = response?.data?.total_inactifs ?? 0
+  const totalUsers = response?.data?.total_actifs + response?.data?.total_inactifs
+
+  const pagination = {
+    currentPage: response?.data?.current_page ?? 1,
+    lastPage: response?.data?.last_page ?? 1,
+    perPage: response?.data?.per_page ?? 20,
+    total: response?.data?.total ?? 0,
+  }
 
   const deleteMutation = useMutation({
     mutationFn: userService.delete,
@@ -89,6 +139,8 @@ export default function Users() {
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.role?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) .filter((user: User) => 
+    !statusFilter || user.status === statusFilter
   )
 
   const handleEdit = (user: User) => {
@@ -110,13 +162,15 @@ export default function Users() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">Chargement...</div>
-      </div>
-    )
-  }
+
+  
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex items-center justify-center h-96">
+  //       <div className="text-muted-foreground">Chargement...</div>
+  //     </div>
+  //   )
+  // }
 
   if (error) {
     return (
@@ -144,59 +198,55 @@ export default function Users() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Utilisateurs
-            </CardTitle>
-            <UsersIcon className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{users.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Utilisateurs Actifs
-            </CardTitle>
-            <UserCheck className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {users.filter((u: User) => u.status === "Actif").length}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="grid gap-4 md:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Total Utilisateurs
+          </CardTitle>
+          <UsersIcon className="h-4 w-4 text-primary" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-foreground">{totalUsers}</div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Utilisateurs Inactifs
-            </CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {users.filter((u: User) => u.status === "Inactif").length}
-            </div>
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Utilisateurs Actifs
+          </CardTitle>
+          <UserCheck className="h-4 w-4 text-success" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-foreground">{totalActifs}</div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Nouveaux ce mois
-            </CardTitle>
-            <Plus className="h-4 w-4 text-info" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">12</div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Utilisateurs Inactifs
+          </CardTitle>
+          <UserX className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-foreground">{totalInactifs}</div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Nouveaux ce mois
+          </CardTitle>
+          <Plus className="h-4 w-4 text-info" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-foreground">{newThisMonth}</div>
+        </CardContent>
+      </Card>
+    </div>
 
       {/* Filters and Search */}
       <Card>
@@ -217,10 +267,40 @@ export default function Users() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filtres
-            </Button>
+
+
+            {/* 🎛️ DropdownMenu pour Filtres */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtres
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Filtrer par statut</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  setStatusFilter("")
+                  setPage(1)
+                }}>
+                  Tous
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setStatusFilter("Actif")
+                  setPage(1)
+                }}>
+                  Actif
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setStatusFilter("Inactif")
+                  setPage(1)
+                }}>
+                  Inactif
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Users Table */}
@@ -273,6 +353,28 @@ export default function Users() {
                 ))}
               </TableBody>
             </Table>
+             <div className="flex justify-between items-center mt-4 flex-wrap gap-2">
+              <div className="text-sm text-muted-foreground">
+                Page {pagination.currentPage} sur {pagination.lastPage}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {[...Array(pagination.lastPage)].map((_, i) => {
+                  const pageNumber = i + 1
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={pageNumber === pagination.currentPage ? "default" : "outline"}
+                      onClick={() => setPage(pageNumber)}
+                      className="px-3 py-1 h-auto text-sm"
+                    >
+                      {pageNumber}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+
           </div>
 
           {filteredUsers.length === 0 && (
@@ -284,12 +386,15 @@ export default function Users() {
       </Card>
 
       {/* Modals */}
-      <UserModal
-        isOpen={modalState.isOpen}
-        onClose={() => setModalState({ isOpen: false, mode: "create" })}
-        user={modalState.user}
-        mode={modalState.mode}
-      />
+  <UserModal
+  key={modalState.user?.id ?? "create"} // 👈 important pour reset complet
+  isOpen={modalState.isOpen}
+  onClose={() => setModalState({ isOpen: false, mode: "create" })}
+  user={modalState.user}
+  mode={modalState.mode}
+   onCreateSuccess={handleCreateSuccess}
+/>
+
 
       <DeleteConfirmModal
         isOpen={deleteModal.isOpen}

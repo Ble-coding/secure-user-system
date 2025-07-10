@@ -1,6 +1,9 @@
 
 // Configuration de l'API pour Laravel
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://kidpass.nady-group.com/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://kidpass.nady-group.com/api';
+// export const BASE_URL = import.meta.env.VITE_BASE_URL || 'https://kidpass.nady-group.com';
+export const BASE_URL = import.meta.env.VITE_BASE_URL || 'https://kidpass.nady-group.com/kidpass/public';
+
 
 // Configuration des headers pour les requêtes
 export const getAuthHeaders = () => {
@@ -19,27 +22,39 @@ export const apiRequest = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
+  const token = localStorage.getItem('auth_token');
+
+  const isFormData = options.body instanceof FormData;
+
+  const headers: HeadersInit = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    // ⚠️ NE PAS ajouter Content-Type si FormData
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...options.headers,
+  };
+
   const config: RequestInit = {
     ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...options.headers,
-    },
+    headers,
   };
 
   console.log('API Request:', url, config);
 
   const response = await fetch(url, config);
-  
+
   console.log('API Response:', response.status, response.statusText);
 
+  const data = await response.json().catch(() => null);
+
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('API Error Response:', errorText);
-    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    console.error('API Error Response:', data);
+    const message = data?.message || 'Erreur inconnue';
+    throw new Error(message);
   }
 
-  const data = await response.json();
   console.log('API Response Data:', data);
   return data;
 };
+

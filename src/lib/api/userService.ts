@@ -46,16 +46,19 @@ export const userService = {
         },
     }),
 
-    update: (id: number, userData: FormData) =>
-    apiRequest<ApiResponse<User>>(`/users-management/users-management/${id}`, {
-        method: 'POST', // méthode POST avec override pour PUT
-        headers: { },   // ⚠️ Ne PAS mettre Content-Type → FormData le gère automatiquement
-        body: (() => {
-        const form = userData
-        form.append("_method", "PUT")
-        return form
-        })(),
-    }),
+update: (id: number, userData: FormData) =>
+  apiRequest<ApiResponse<User>>(`/users-management/users-management/${id}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    },
+    body: (() => {
+      const form = userData
+      form.append("_method", "PUT") // permet d'émuler une requête PUT via POST
+      return form
+    })(),
+  }),
 
 
   delete: (id: number) =>

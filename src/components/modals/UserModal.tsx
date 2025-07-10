@@ -1,7 +1,8 @@
 
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { BASE_URL } from "@/lib/api/config"
 import * as z from "zod"
 import {
   Dialog,
@@ -28,94 +29,181 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { User, userService } from "@/lib/api"
+import { userService } from "@/lib/api/userService"
+import { User } from "@/lib/api/users"
 import { useToast } from "@/hooks/use-toast"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 const userSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  name: z.string().min(2, "Le nom est requis"),
   email: z.string().email("Email invalide"),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères").optional(),
+  phone: z.string().min(6, "Téléphone requis"),
+
+  password: z.preprocess(
+    (val) => val === "" ? undefined : val, // vide = undefined
+    z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères").optional()
+  ),
+
+  password_confirmation: z.preprocess(
+    (val) => val === "" ? undefined : val,
+    z.string().optional()
+  ),
+
   role: z.string().min(1, "Le rôle est requis"),
+  photo: z.any().optional(),
+}).refine((data) => {
+  if (data.password || data.password_confirmation) {
+    return data.password === data.password_confirmation
+  }
+  return true
+}, {
+  path: ['password_confirmation'],
+  message: "Les mots de passe ne correspondent pas",
 })
+
+
 
 type UserFormData = z.infer<typeof userSchema>
 
 interface UserModalProps {
   isOpen: boolean
   onClose: () => void
+    onCreateSuccess?: () => void
   user?: User
   mode: "create" | "edit" | "view"
 }
 
-export function UserModal({ isOpen, onClose, user, mode }: UserModalProps) {
+export function UserModal({ isOpen, onClose, user, mode, onCreateSuccess  }: UserModalProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-
-  const form = useForm<UserFormData>({
+const [photoInputKey, setPhotoInputKey] = useState(Date.now())
+ const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: user ? {
-      name: user.name || "",
-      email: user.email || "",
-      role: user.role || "",
-    } : {
+    defaultValues: {
       name: "",
       email: "",
+      phone: "",
       password: "",
+      password_confirmation: "",
       role: "",
+    photo: undefined, // ✅ correct
+
     },
   })
+
+  useEffect(() => {
+  const errors = form.formState.errors
+  if (Object.keys(errors).length > 0) {
+    console.warn("❌ Erreurs de validation", errors)
+  }
+}, [form.formState.errors])
+
+  useEffect(() => {
+  if (isOpen) {
+    if (user && mode !== "create") {
+form.reset({
+  name: user.name || "",
+  email: user.email || "",
+  phone: user.phone || "",               // ✅ Ajouté
+  role: user.role || "",
+  password: "",
+  password_confirmation: "",
+  photo: undefined,                      // ✅ ← FormData, pas besoin de set un string
+})
+
+    } else {
+       form.reset()
+    }
+       setPhotoInputKey(Date.now()) // ✅ force le champ input file à se remonter
+  }
+}, [isOpen, user, mode, form]) // ← ajouter `form`
+
 
   const createMutation = useMutation({
     mutationFn: userService.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
+        setTimeout(() => {
+    onCreateSuccess?.() // setPage(1)
+  }, 0)
+    queryClient.invalidateQueries({
+  queryKey: ['users'], // cela va invalider toutes les variations ['users', ...]
+  exact: false, // ce `false` est important pour que toutes les variations avec page, filtre, etc., soient rafraîchies
+})
       toast({ title: "Utilisateur créé avec succès" })
       form.reset()
       onClose()
+        onCreateSuccess?.() // 🔁 déclenche le setPage(1)
     },
-    onError: (error: any) => {
-      console.error('Error creating user:', error)
+    onError: (error: unknown) => {
+      const err = error as { message?: string };
+      console.error('Error creating user:', error);
       toast({ 
         title: "Erreur lors de la création", 
-        description: error.message || "Une erreur est survenue",
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
-      })
+      });
     },
   })
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<User> }) =>
+const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: FormData }) =>
       userService.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast({ title: "Utilisateur modifié avec succès" })
+        setTimeout(() => {
+    onCreateSuccess?.() // setPage(1)
+  }, 0)
+queryClient.invalidateQueries({
+  queryKey: ['users'], // cela va invalider toutes les variations ['users', ...]
+  exact: false, // ce `false` est important pour que toutes les variations avec page, filtre, etc., soient rafraîchies
+})
+      toast({ title: "Utilisateur mis à jour avec succès" })
+      form.reset()
       onClose()
+        onCreateSuccess?.() // 🔁 déclenche le setPage(1)
     },
-    onError: (error: any) => {
-      console.error('Error updating user:', error)
-      toast({ 
-        title: "Erreur lors de la modification", 
-        description: error.message || "Une erreur est survenue",
-        variant: "destructive" 
+    onError: () => {
+      toast({
+        title: "Erreur lors de la mise à jour",
+        variant: "destructive",
       })
     },
   })
+  // const onSubmit = (data: UserFormData) => {
+  //   if (mode === "create") {
+  //     createMutation.mutate(data)
+  //   } else if (mode === "edit" && user) {
+  //     const { password, ...updateData } = data
+  //     updateMutation.mutate({ id: user.id, data: updateData })
+  //   }
+  // }
 
-  const onSubmit = (data: UserFormData) => {
-    if (mode === "create") {
-      createMutation.mutate(data)
-    } else if (mode === "edit" && user) {
-      const { password, ...updateData } = data
-      updateMutation.mutate({ id: user.id, data: updateData })
-    }
+const onSubmit = (data: z.infer<typeof userSchema>) => {
+  const formData = new FormData()
+  formData.append("name", data.name)
+  formData.append("email", data.email)
+  formData.append("phone", data.phone)
+    formData.append("role", data.role)
+  if (data.password) formData.append("password", data.password)
+  if (data.password_confirmation) formData.append("password_confirmation", data.password_confirmation)
+        if (data.photo instanceof File) formData.append("photo", data.photo)
+
+console.log([...formData.entries()])
+  if (mode === "create") {
+    createMutation.mutate(formData)
+  } else if (mode === "edit" && user) {
+      console.log("🔧 En mode édition, updateMutation envoyé")
+    updateMutation.mutate({ id: user.id, data: formData })
   }
+}
+
+
 
   const isReadOnly = mode === "view"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent  className="max-w-md max-h-[90vh] overflow-y-auto">
+
         <DialogHeader>
           <DialogTitle>
             {mode === "create" && "Ajouter un utilisateur"}
@@ -158,6 +246,20 @@ export function UserModal({ isOpen, onClose, user, mode }: UserModalProps) {
                 </FormItem>
               )}
             />
+         
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Téléphone</FormLabel>
+                  <FormControl>
+                    <Input type="text" {...field} disabled={isReadOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {mode === "create" && (
               <FormField
@@ -175,6 +277,24 @@ export function UserModal({ isOpen, onClose, user, mode }: UserModalProps) {
               />
             )}
 
+
+            {mode === "create" && (
+              <FormField
+                control={form.control}
+                name="password_confirmation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirmer le mot de passe</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+
             <FormField
               control={form.control}
               name="role"
@@ -188,16 +308,52 @@ export function UserModal({ isOpen, onClose, user, mode }: UserModalProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Agent">Agent</SelectItem>
-                      <SelectItem value="Parent">Parent</SelectItem>
-                      <SelectItem value="Récupérateur">Récupérateur</SelectItem>
+                      <SelectItem value="superadmin">Super Admin</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      {/* <SelectItem value="Parent">Parent</SelectItem>
+                      <SelectItem value="Récupérateur">Récupérateur</SelectItem> */}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {!isReadOnly && (
+              <FormField
+                control={form.control}
+                name="photo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Photo de profil</FormLabel>
+             <FormControl>
+  <div className="space-y-2">
+    {mode !== "create" && typeof user?.photo === "string" && user.photo && (
+      <img
+        src={`${BASE_URL}/storage/${user.photo}`}
+        alt="Aperçu"
+        className="w-20 h-20 object-cover rounded-md border"
+        onError={(e) => {
+          e.currentTarget.style.display = "none"
+          console.warn("Erreur de chargement image :", e.currentTarget.src)
+        }}
+      />
+    )}
+
+    <Input
+      type="file"
+      key={photoInputKey}
+      accept="image/*"
+      onChange={(e) => field.onChange(e.target.files?.[0])}
+    />
+  </div>
+</FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
 
             {!isReadOnly && (
               <DialogFooter>
