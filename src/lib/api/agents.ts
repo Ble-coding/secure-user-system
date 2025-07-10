@@ -1,28 +1,43 @@
 
 import { apiRequest } from './config';
-import { Agent, ChildEntry } from './types';
+import { ApiResponse } from '@/types/api';
+import { Agent, PaginatedAgentResponse } from '@/types/Agent';
 
 export const agentService = {
-  getAll: () =>
-    apiRequest<Agent[]>('/users/agents'),
+  getAll: (page = 1, search = "", status = "") =>
+    apiRequest<ApiResponse<PaginatedAgentResponse>>(
+      `/users/agents?page=${page}&search=${encodeURIComponent(search)}&status=${status}`
+    ),
 
   getById: (id: number) =>
-    apiRequest<Agent>(`/users/agents/${id}`),
+    apiRequest<ApiResponse<Agent>>(`/users/agents/${id}`),
 
-  create: (agentData: Partial<Agent>) =>
-    apiRequest<Agent>('/users/agents', {
+  create: (agentData: FormData) =>
+    apiRequest<ApiResponse<Agent>>('/users/agents', {
       method: 'POST',
-      body: JSON.stringify(agentData),
+      body: agentData,
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
     }),
 
-  update: (id: number, agentData: Partial<Agent>) =>
-    apiRequest<Agent>(`/users/agents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(agentData),
+  update: (id: number, agentData: FormData) =>
+    apiRequest<ApiResponse<Agent>>(`/users/agents/${id}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
+      body: (() => {
+        const form = agentData
+        form.append("_method", "PUT")
+        return form
+      })(),
     }),
 
   delete: (id: number) =>
-    apiRequest(`/users/agents/${id}`, {
+    apiRequest<ApiResponse<null>>(`/users/agents/${id}`, {
       method: 'DELETE',
     }),
 
@@ -34,7 +49,7 @@ export const agentService = {
     type: 'entry' | 'exit';
     scanned_at?: string;
   }) =>
-    apiRequest<{ entry: ChildEntry; warnings?: string[] }>('/agents/scan-qr-code', {
+    apiRequest<ApiResponse<any>>('/agents/scan-qr-code', {
       method: 'POST',
       body: JSON.stringify(scanData),
     }),

@@ -14,3 +14,7 @@ export { qrCodeService } from './qrcode';
 
 // Export configuration utilities
 export { API_BASE_URL, getAuthHeaders, apiRequest } from './config';
+
+// Export new types
+export type { ApiResponse } from '@/types/api';
+export type { Agent, PaginatedAgentResponse } from '@/types/Agent';

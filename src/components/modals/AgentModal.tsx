@@ -22,7 +22,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Agent, agentService } from "@/lib/api"
+import { Agent } from "@/types/Agent"
+import { agentService } from "@/lib/api/agents"
 import { useToast } from "@/hooks/use-toast"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
@@ -41,9 +42,10 @@ interface AgentModalProps {
   onClose: () => void
   agent?: Agent
   mode: "create" | "edit" | "view"
+  onCreateSuccess?: () => void
 }
 
-export function AgentModal({ isOpen, onClose, agent, mode }: AgentModalProps) {
+export function AgentModal({ isOpen, onClose, agent, mode, onCreateSuccess }: AgentModalProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -71,6 +73,7 @@ export function AgentModal({ isOpen, onClose, agent, mode }: AgentModalProps) {
       toast({ title: "Agent créé avec succès" })
       form.reset()
       onClose()
+      onCreateSuccess?.()
     },
     onError: (error: any) => {
       console.error('Error creating agent:', error)
@@ -83,7 +86,7 @@ export function AgentModal({ isOpen, onClose, agent, mode }: AgentModalProps) {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Agent> }) =>
+    mutationFn: ({ id, data }: { id: number; data: FormData }) =>
       agentService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] })
@@ -101,16 +104,19 @@ export function AgentModal({ isOpen, onClose, agent, mode }: AgentModalProps) {
   })
 
   const onSubmit = (data: AgentFormData) => {
-    const submitData = {
-      ...data,
-      code: `AG-${Date.now()}`, // Génération temporaire du code
-      status: "En service" as const,
-    };
+    const formData = new FormData()
+    formData.append('first_name', data.first_name)
+    formData.append('last_name', data.last_name)
+    formData.append('email', data.email)
+    formData.append('phone', data.phone)
+    formData.append('type', data.type)
+    formData.append('code', `AG-${Date.now()}`)
+    formData.append('status', 'En service')
 
     if (mode === "create") {
-      createMutation.mutate(submitData)
+      createMutation.mutate(formData)
     } else if (mode === "edit" && agent) {
-      updateMutation.mutate({ id: agent.id, data: submitData })
+      updateMutation.mutate({ id: agent.id, data: formData })
     }
   }
 
