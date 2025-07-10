@@ -1,9 +1,10 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { RestoreModal } from "@/components/modals/RestoreModal"
 import { 
   Table,
   TableBody,
@@ -20,13 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { 
   Users2, 
   Plus, 
@@ -35,13 +29,15 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  RotateCcw,
   Eye,
   UserCheck,
   UserX,
   Phone,
   MapPin
 } from "lucide-react"
-import { parentService, ParentUser } from "@/lib/api"
+import { parentService } from "@/lib/api"
+import { ParentUser } from "@/lib/api/types"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ParentModal } from "@/components/modals/ParentModal"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
@@ -49,7 +45,8 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function Parents() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [page, setPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState("")
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     mode: "create" | "edit" | "view"
@@ -59,14 +56,43 @@ export default function Parents() {
     isOpen: boolean
     parent?: ParentUser
   }>({ isOpen: false })
+  const [restoreModal, setRestoreModal] = useState<{
+    isOpen: boolean
+    parent?: ParentUser
+  }>({ isOpen: false })
 
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  
+  const queryKey = ['parents', page, searchTerm, statusFilter]
 
-  const { data: parents = [], isLoading, error } = useQuery({
-    queryKey: ['parents'],
-    queryFn: parentService.getAll,
+  const { data: response, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => parentService.getAll(page, searchTerm, statusFilter),
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   })
+
+  useEffect(() => {
+    queryClient.invalidateQueries({
+      queryKey: ['parents'],
+      exact: false,
+    })
+  }, [page, queryClient])
+
+  const parents = response?.data?.parent ?? []
+  const newThisMonth = response?.data?.new_this_month ?? 0
+  const totalActifs = response?.data?.total_actifs ?? 0
+  const totalInactifs = response?.data?.total_inactifs ?? 0
+  const totalParents = totalActifs + totalInactifs
+
+  const pagination = {
+    currentPage: response?.data?.current_page ?? 1,
+    lastPage: response?.data?.last_page ?? 1,
+    perPage: response?.data?.per_page ?? 20,
+    total: response?.data?.total ?? 0,
+  }
 
   const deleteMutation = useMutation({
     mutationFn: parentService.delete,
@@ -79,10 +105,25 @@ export default function Parents() {
     },
   })
 
+  const restoreMutation = useMutation({
+    mutationFn: parentService.restore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parents'] })
+      toast({ title: "Parent restauré avec succès" })
+    },
+    onError: () => {
+      toast({ title: "Erreur lors de la restauration", variant: "destructive" })
+    },
+  })
+
   const getStatusBadge = (status: string) => {
     return status === "Actif" 
       ? <Badge className="bg-success text-success-foreground">Actif</Badge>
       : <Badge variant="secondary">Inactif</Badge>
+  }
+
+  const handleCreateSuccess = () => {
+    setPage(1)
   }
 
   const filteredParents = parents.filter((parent: ParentUser) => {
@@ -91,7 +132,7 @@ export default function Parents() {
       parent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       parent.telephone.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesStatus = statusFilter === "all" || parent.status === statusFilter
+    const matchesStatus = !statusFilter || parent.status === statusFilter
     
     return matchesSearch && matchesStatus
   })
@@ -108,6 +149,10 @@ export default function Parents() {
     setDeleteModal({ isOpen: true, parent })
   }
 
+  const handleRestore = (parent: ParentUser) => {
+    setRestoreModal({ isOpen: true, parent })
+  }
+
   const confirmDelete = () => {
     if (deleteModal.parent) {
       deleteMutation.mutate(deleteModal.parent.id)
@@ -115,12 +160,11 @@ export default function Parents() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">Chargement...</div>
-      </div>
-    )
+  const confirmRestore = () => {
+    if (restoreModal.parent) {
+      restoreMutation.mutate(restoreModal.parent.code)
+      setRestoreModal({ isOpen: false })
+    }
   }
 
   if (error) {
@@ -158,10 +202,10 @@ export default function Parents() {
             <Users2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{parents.length}</div>
+            <div className="text-2xl font-bold text-foreground">{totalParents}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -170,9 +214,7 @@ export default function Parents() {
             <UserCheck className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {parents.filter((p: ParentUser) => p.status === "Actif").length}
-            </div>
+            <div className="text-2xl font-bold text-foreground">{totalActifs}</div>
           </CardContent>
         </Card>
 
@@ -184,23 +226,19 @@ export default function Parents() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {parents.filter((p: ParentUser) => p.status === "Inactif").length}
-            </div>
+            <div className="text-2xl font-bold text-foreground">{totalInactifs}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Enfants
+              Nouveaux ce mois
             </CardTitle>
             <Plus className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {parents.reduce((total: number, parent: ParentUser) => total + parent.children.length, 0)}
-            </div>
+            <div className="text-2xl font-bold text-foreground">{newThisMonth}</div>
           </CardContent>
         </Card>
       </div>
@@ -224,17 +262,37 @@ export default function Parents() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filtrer par statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="Actif">Actif</SelectItem>
-                <SelectItem value="Inactif">Inactif</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtres
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Filtrer par statut</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  setStatusFilter("")
+                  setPage(1)
+                }}>
+                  Tous
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setStatusFilter("Actif")
+                  setPage(1)
+                }}>
+                  Actif
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setStatusFilter("Inactif")
+                  setPage(1)
+                }}>
+                  Inactif
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="rounded-md border border-border">
@@ -244,7 +302,7 @@ export default function Parents() {
                   <TableHead>Nom</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Adresse</TableHead>
-                  <TableHead>Enfants</TableHead>
+                  <TableHead>Code</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -269,9 +327,7 @@ export default function Parents() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {parent.children.length} enfant{parent.children.length > 1 ? 's' : ''}
-                      </Badge>
+                      <Badge variant="outline">{parent.code}</Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(parent.status)}</TableCell>
                     <TableCell className="text-right">
@@ -292,10 +348,17 @@ export default function Parents() {
                             Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(parent)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
+                          {parent.status === "Inactif" ? (
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => handleRestore(parent)}>
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              Restaurer
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => handleDelete(parent)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -303,6 +366,28 @@ export default function Parents() {
                 ))}
               </TableBody>
             </Table>
+
+            <div className="flex justify-between items-center mt-4 flex-wrap gap-2">
+              <div className="text-sm text-muted-foreground">
+                Page {pagination.currentPage} sur {pagination.lastPage}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {[...Array(pagination.lastPage)].map((_, i) => {
+                  const pageNumber = i + 1
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={pageNumber === pagination.currentPage ? "default" : "outline"}
+                      onClick={() => setPage(pageNumber)}
+                      className="px-3 py-1 h-auto text-sm"
+                    >
+                      {pageNumber}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           {filteredParents.length === 0 && (
@@ -315,10 +400,12 @@ export default function Parents() {
 
       {/* Modals */}
       <ParentModal
+        key={modalState.parent?.id ?? "create"}
         isOpen={modalState.isOpen}
         onClose={() => setModalState({ isOpen: false, mode: "create" })}
         parent={modalState.parent}
         mode={modalState.mode}
+        onCreateSuccess={handleCreateSuccess}
       />
 
       <DeleteConfirmModal
@@ -328,6 +415,17 @@ export default function Parents() {
         title="Supprimer ce parent"
         description="Êtes-vous sûr de vouloir supprimer ce parent ? Cette action est irréversible."
         isLoading={deleteMutation.isPending}
+      />
+
+      <RestoreModal
+        isOpen={restoreModal.isOpen}
+        onClose={() => setRestoreModal({ isOpen: false })}
+        onConfirm={confirmRestore}
+        title="Restaurer ce parent"
+        description="Êtes-vous sûr de vouloir restaurer ce parent ?"
+        entityType="Parent"
+        entityCode={restoreModal.parent?.code || ""}
+        isLoading={restoreMutation.isPending}
       />
     </div>
   )

@@ -1,11 +1,13 @@
 
 import { apiRequest } from './config';
-import { ParentUser } from './types';
 import { ApiResponse } from '@/types/api';
+import { ParentUser, PaginatedParentResponse } from '@/types/Parent';
 
 export const parentService = {
-  getAll: () =>
-    apiRequest<ParentUser[]>('/users/parents'),
+  getAll: (page = 1, search = "", status = "") =>
+    apiRequest<ApiResponse<PaginatedParentResponse>>(
+      `/users/parents?page=${page}&search=${encodeURIComponent(search)}&status=${status}`
+    ),
 
   getById: (id: number) =>
     apiRequest<ParentUser>(`/users/parents/${id}`),
