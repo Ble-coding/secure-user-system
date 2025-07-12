@@ -9,6 +9,12 @@ export const parentService = {
       `/users/parents?page=${page}&search=${encodeURIComponent(search)}&status=${status}`
     ),
 
+  // Nouveau endpoint pour la recherche dans les selects
+  getSelectList: (search = "", page = 1) =>
+    apiRequest<ApiResponse<PaginatedParentResponse>>(
+      `/users/parents-select?search=${encodeURIComponent(search)}&page=${page}`
+    ),
+
   getById: (id: number) =>
     apiRequest<ParentUser>(`/users/parents/${id}`),
 

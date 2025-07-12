@@ -1,4 +1,3 @@
-
 import { UseFormReturn } from "react-hook-form"
 import {
   FormControl,
@@ -10,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Combobox } from "@/components/ui/combobox"
 import { ParentUser } from "@/types/Parent"
 import { Child } from "@/lib/api/types"
 import { RecuperatorFormData } from "./recuperatorValidation"
@@ -24,6 +24,15 @@ interface RecuperatorFormFieldsProps {
   recuperator?: Recuperator
   mode: "create" | "edit" | "view"
 }
+
+const relationOptions = [
+  { value: "parent", label: "Parent" },
+  { value: "grand-parent", label: "Grand-parent" },
+  { value: "oncle/tante", label: "Oncle/Tante" },
+  { value: "frère/sœur", label: "Frère/Sœur" },
+  { value: "tuteur", label: "Tuteur légal" },
+  { value: "autre", label: "Autre" },
+]
 
 export function RecuperatorFormFields({ 
   form, 
@@ -140,21 +149,17 @@ export function RecuperatorFormFields({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Type de relation *</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner la relation" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="parent">Parent</SelectItem>
-                <SelectItem value="grand-parent">Grand-parent</SelectItem>
-                <SelectItem value="oncle/tante">Oncle/Tante</SelectItem>
-                <SelectItem value="frère/sœur">Frère/Sœur</SelectItem>
-                <SelectItem value="tuteur">Tuteur légal</SelectItem>
-                <SelectItem value="autre">Autre</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl>
+              <Combobox
+                options={relationOptions}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Sélectionner la relation"
+                searchPlaceholder="Rechercher une relation..."
+                emptyText="Aucune relation trouvée."
+                disabled={isReadOnly}
+              />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}

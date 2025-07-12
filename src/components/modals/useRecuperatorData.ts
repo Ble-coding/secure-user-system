@@ -5,39 +5,30 @@ import { childService } from "@/lib/api/children"
 import { Child } from "@/lib/api/types"
 
 export function useRecuperatorData() {
-  // Récupérer la liste des parents
+  // Récupérer la liste des parents pour le select (plus efficace)
   const { data: parentsResponse } = useQuery({
-    queryKey: ['parents', 'all'],
-    queryFn: () => parentService.getAll(1, "", ""),
+    queryKey: ['parents', 'select'],
+    queryFn: () => parentService.getSelectList("", 1),
   })
 
-  const parents = parentsResponse?.data?.parent || []
-
-  // Pour récupérer tous les enfants, nous devons les récupérer via chaque parent
-  const { data: allChildren = [] } = useQuery({
-    queryKey: ['children', 'all', parents.map(p => p.id).join(',')],
-    queryFn: async () => {
-      if (parents.length === 0) return []
-      
-      const childrenPromises = parents.map(parent => 
-        childService.getByParent(parent.code).catch(() => [])
-      )
-      
-      const childrenArrays = await Promise.all(childrenPromises)
-      return childrenArrays.flat()
-    },
-    enabled: parents.length > 0,
-  })
+  const parents = parentsResponse?.data?.data || []
 
   const getAvailableChildren = (selectedParentId: number | null) => {
-    return selectedParentId 
-      ? allChildren.filter((child: Child) => child.parent_id === selectedParentId)
-      : []
+    // Trouver le parent sélectionné pour obtenir son code
+    const selectedParent = parents.find(p => p.id === selectedParentId)
+    
+    // Hook pour récupérer les enfants du parent sélectionné
+    const { data: childrenData = [] } = useQuery({
+      queryKey: ['children', 'by-parent', selectedParent?.code],
+      queryFn: () => selectedParent ? childService.getByParent(selectedParent.code) : Promise.resolve([]),
+      enabled: !!selectedParent,
+    })
+
+    return childrenData
   }
 
   return {
     parents,
-    allChildren,
     getAvailableChildren
   }
 }
