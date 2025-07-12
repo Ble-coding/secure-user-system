@@ -1,14 +1,17 @@
 
-import { apiRequest } from './config';
-import { Recuperator } from './types';
-import { ApiResponse } from '@/types/api';
+import { apiRequest } from './config'
+import { Recuperator } from '@/types/Recuperator'
+import { PaginatedRecuperatorResponse } from '@/types/PaginatedRecuperatorResponse'
+import { ApiResponse } from '@/types/api'
 
 export const recuperatorService = {
-  getAll: () =>
-    apiRequest<Recuperator[]>('/users/recuperators'),
+  getAll: (page = 1, search = "", status = "") =>
+    apiRequest<ApiResponse<PaginatedRecuperatorResponse>>(
+      `/users/recuperators?page=${page}&search=${encodeURIComponent(search)}&status=${status}`
+    ),
 
-  getById: (id: number) =>
-    apiRequest<Recuperator>(`/users/recuperators/${id}`),
+  getById: (code: string) =>
+    apiRequest<ApiResponse<Recuperator>>(`/users/recuperators/${code}`),
 
   create: (recuperatorData: FormData) =>
     apiRequest<ApiResponse<Recuperator>>('/users/recuperators', {
@@ -20,22 +23,21 @@ export const recuperatorService = {
       },
     }),
 
-  update: (id: number, recuperatorData: FormData) =>
-    apiRequest<ApiResponse<Recuperator>>(`/users/recuperators/${id}`, {
+  update: (code: string, recuperatorData: FormData) =>
+    apiRequest<ApiResponse<Recuperator>>(`/users/recuperators/${code}`, {
       method: 'POST',
+      body: (() => {
+        recuperatorData.append('_method', 'PUT')
+        return recuperatorData
+      })(),
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
       },
-      body: (() => {
-        const form = recuperatorData
-        form.append("_method", "PUT")
-        return form
-      })(),
     }),
 
-  delete: (id: number) =>
-    apiRequest(`/users/recuperators/${id}`, {
+  delete: (code: string) =>
+    apiRequest<ApiResponse<null>>(`/users/recuperators/${code}`, {
       method: 'DELETE',
     }),
 
@@ -45,11 +47,11 @@ export const recuperatorService = {
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      }
+      },
     }),
 
   generateQrCode: (recuperatorId: number, childId: number) =>
     apiRequest<{ qr_code: string }>(`/users/recuperators/${recuperatorId}/children/${childId}/qr-code`, {
       method: 'POST',
     }),
-};
+}
