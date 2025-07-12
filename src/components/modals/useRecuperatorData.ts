@@ -11,7 +11,7 @@ export function useRecuperatorData() {
     queryFn: () => parentService.getSelectList("", 1),
   })
 
-  const parents = parentsResponse?.data?.data || []
+  const parents = parentsResponse?.data?.parent || []
 
   const getAvailableChildren = (selectedParentId: number | null) => {
     // Trouver le parent sélectionné pour obtenir son code
