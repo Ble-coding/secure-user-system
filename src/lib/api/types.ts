@@ -61,7 +61,7 @@ export interface Child {
   first_name: string;
   last_name: string;
   code: string;
-  gender: string;
+  gender: "M" | "F";
   date_of_birth: string;
   photo?: string; // photo de profil
   class: string;

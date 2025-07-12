@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Recuperator } from "@/types/Recuperator"
 import { ParentUser } from "@/types/Parent"
-import { Child } from "@/types/Recuperator"
+import { Child } from "@/lib/api/types"
 import { recuperatorService } from "@/lib/api/recuperators"
 import { parentService } from "@/lib/api/parents"
 import { childService } from "@/lib/api/children"
@@ -98,7 +98,7 @@ export function RecuperatorModal({ isOpen, onClose, recuperator, mode }: Recuper
     queryFn: () => childService.getAll(),
   })
 
-  const parents = parentsResponse?.data?.parents || []
+  const parents = parentsResponse?.data?.parent || []
   const allChildren = childrenResponse || []
 
   // Filtrer les enfants selon le parent sélectionné
