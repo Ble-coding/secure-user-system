@@ -11,14 +11,23 @@ export function useRecuperatorData() {
     queryFn: () => parentService.getAll(1, "", ""),
   })
 
-  // Récupérer la liste des enfants
-  const { data: childrenResponse } = useQuery({
-    queryKey: ['children', 'all'],
-    queryFn: () => childService.getAll(),
-  })
-
   const parents = parentsResponse?.data?.parent || []
-  const allChildren = childrenResponse || []
+
+  // Pour récupérer tous les enfants, nous devons les récupérer via chaque parent
+  const { data: allChildren = [] } = useQuery({
+    queryKey: ['children', 'all', parents.map(p => p.id).join(',')],
+    queryFn: async () => {
+      if (parents.length === 0) return []
+      
+      const childrenPromises = parents.map(parent => 
+        childService.getByParent(parent.code).catch(() => [])
+      )
+      
+      const childrenArrays = await Promise.all(childrenPromises)
+      return childrenArrays.flat()
+    },
+    enabled: parents.length > 0,
+  })
 
   const getAvailableChildren = (selectedParentId: number | null) => {
     return selectedParentId 
