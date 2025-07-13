@@ -36,6 +36,14 @@ export default function Children() {
     total: response?.data?.total ?? 0,
   }
 
+  // Statistiques globales (si disponibles du backend)
+  const globalStats = {
+    totalPresent: response?.data?.total_present,
+    totalExited: response?.data?.total_exited,
+    totalNoActivity: response?.data?.total_no_activity,
+    totalEntriesCount: response?.data?.total_entries_count,
+  }
+
   const filteredChildren = children.filter((child: ChildWithRelations) => {
     // Filter by activity status
     if (entryFilter !== "all") {
@@ -89,7 +97,14 @@ export default function Children() {
       </div>
 
       {/* Stats Cards */}
-      <ChildrenStats children={children} totalCount={pagination.total} />
+      <ChildrenStats 
+        children={children} 
+        totalCount={pagination.total}
+        totalPresent={globalStats.totalPresent}
+        totalExited={globalStats.totalExited}
+        totalNoActivity={globalStats.totalNoActivity}
+        totalEntriesCount={globalStats.totalEntriesCount}
+      />
 
       {/* Children Table */}
       <Card>

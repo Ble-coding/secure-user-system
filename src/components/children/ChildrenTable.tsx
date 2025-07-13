@@ -21,9 +21,11 @@ import {
   Eye,
   Clock,
   Mail,
-  User
+  User,
+  Phone,
+  Hash
 } from "lucide-react"
-import { ChildWithRelations } from "@/lib/api"
+import { ChildWithRelations } from "@/lib/api/children"
 
 interface ChildrenTableProps {
   children: ChildWithRelations[]
@@ -70,7 +72,7 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
                   <div className="font-semibold">{child.first_name} {child.last_name}</div>
                   <div className="text-sm text-muted-foreground flex items-center gap-2">
                     <Badge variant="outline" className="mr-1">{child.code}</Badge>
-                    {getGenderBadge(child.gender)}
+                    {(child.gender === "M" || child.gender === "F") && getGenderBadge(child.gender)}
                     {child.class && <Badge variant="outline">{child.class}</Badge>}
                   </div>
                 </div>
@@ -82,10 +84,22 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
                       <User className="w-3 h-3" />
                       {child.parent.prenom} {child.parent.nom}
                     </div>
+                    {child.parent.code && (
+                      <div className="text-muted-foreground flex items-center gap-1">
+                        <Hash className="w-3 h-3" />
+                        {child.parent.code}
+                      </div>
+                    )}
                     <div className="text-muted-foreground flex items-center gap-1">
                       <Mail className="w-3 h-3" />
                       {child.parent.email}
                     </div>
+                    {child.parent.telephone && (
+                      <div className="text-muted-foreground flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {child.parent.telephone}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <span className="text-muted-foreground">Aucun parent</span>

@@ -9,6 +9,8 @@ interface ChildWithRelations extends Child {
     prenom: string;
     nom: string;
     email: string;
+    code?: string;
+    telephone?: string;
   };
   recuperators: Array<{
     id: number;
@@ -38,6 +40,11 @@ interface PaginatedChildrenResponse {
   last_page: number;
   per_page: number;
   total: number;
+  // Ajout des statistiques globales
+  total_present: number;
+  total_exited: number;
+  total_no_activity: number;
+  total_entries_count: number;
 }
 
 export const childService = {
