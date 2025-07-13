@@ -3,6 +3,43 @@ import { apiRequest } from './config';
 import { Child } from './types';
 import { ApiResponse } from '@/types/api';
 
+interface ChildWithRelations extends Child {
+  parent?: {
+    id: number;
+    prenom: string;
+    nom: string;
+    email: string;
+  };
+  recuperators: Array<{
+    id: number;
+    code: string;
+    first_name: string;
+    last_name: string;
+  }>;
+  entry_count: number;
+  exit_count: number;
+  last_scanned_at?: string;
+  last_activities: Array<{
+    id: number;
+    type: 'entry' | 'exit';
+    status: string;
+    scanned_at: string;
+    recuperator?: {
+      full_name: string;
+      code: string;
+      photo?: string;
+    };
+  }>;
+}
+
+interface PaginatedChildrenResponse {
+  children: ChildWithRelations[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
 export const childService = {
   // Récupérer tous les enfants d'un parent spécifique
   getByParent: (parentCodeOrId: string) =>
@@ -54,11 +91,17 @@ export const childService = {
       }
     }),
 
-  // Nouvelle méthode pour récupérer tous les enfants (en récupérant d'abord tous les parents)
+  // Récupérer tous les enfants avec leurs relations
+  getAllWithRelations: (page = 1, search = "") =>
+    apiRequest<ApiResponse<PaginatedChildrenResponse>>(
+      `/users/children-with-relations?page=${page}&search=${encodeURIComponent(search)}`
+    ),
+
+  // Ancienne méthode pour compatibilité
   getAll: async () => {
-    // Cette méthode pourrait nécessiter de récupérer les enfants via les parents
-    // Pour l'instant, nous retournons un tableau vide et vous devrez adapter selon vos besoins
     console.warn('childService.getAll() : Cette méthode doit être adaptée selon votre API')
     return []
   },
 };
+
+export type { ChildWithRelations, PaginatedChildrenResponse };
