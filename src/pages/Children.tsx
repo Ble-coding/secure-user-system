@@ -86,7 +86,7 @@ export default function Children() {
   const filteredChildren = children.filter((child: ChildWithRelations) => {
     if (entryFilter === "all") return true
     const lastActivity = child.last_activities?.[0]
-    if (!lastActivity) return entryFilter === "all"
+    if (!lastActivity) return false
     return lastActivity.type === entryFilter
   })
 

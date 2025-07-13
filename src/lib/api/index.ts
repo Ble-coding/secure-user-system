@@ -7,7 +7,7 @@ export { authService } from './auth';
 export { userService } from './users';
 export { agentService } from './agents';
 export { parentService } from './parents';
-export { childService } from './children';
+export { childService, type ChildWithRelations, type PaginatedChildrenResponse } from './children';
 export { recuperatorService } from './recuperators';
 export { entryService } from './entries';
 export { qrCodeService } from './qrcode';
