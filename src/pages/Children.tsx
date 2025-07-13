@@ -14,6 +14,8 @@ export default function Children() {
   const [searchTerm, setSearchTerm] = useState("")
   const [page, setPage] = useState(1)
   const [entryFilter, setEntryFilter] = useState<"all" | "entry" | "exit">("all")
+  const [genderFilter, setGenderFilter] = useState<"all" | "M" | "F">("all")
+  const [classFilter, setClassFilter] = useState("")
   const [selectedChild, setSelectedChild] = useState<ChildWithRelations | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
@@ -35,10 +37,24 @@ export default function Children() {
   }
 
   const filteredChildren = children.filter((child: ChildWithRelations) => {
-    if (entryFilter === "all") return true
-    const lastActivity = child.last_activities?.[0]
-    if (!lastActivity) return false
-    return lastActivity.type === entryFilter
+    // Filter by activity status
+    if (entryFilter !== "all") {
+      const lastActivity = child.last_activities?.[0]
+      if (!lastActivity) return false
+      if (lastActivity.type !== entryFilter) return false
+    }
+
+    // Filter by gender
+    if (genderFilter !== "all" && child.gender !== genderFilter) {
+      return false
+    }
+
+    // Filter by class
+    if (classFilter && child.class && !child.class.toLowerCase().includes(classFilter.toLowerCase())) {
+      return false
+    }
+
+    return true
   })
 
   const handleViewDetails = (child: ChildWithRelations) => {
@@ -89,6 +105,10 @@ export default function Children() {
             setSearchTerm={setSearchTerm}
             entryFilter={entryFilter}
             setEntryFilter={setEntryFilter}
+            genderFilter={genderFilter}
+            setGenderFilter={setGenderFilter}
+            classFilter={classFilter}
+            setClassFilter={setClassFilter}
           />
 
           <ChildrenTable
@@ -103,7 +123,7 @@ export default function Children() {
 
           {filteredChildren.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Aucun enfant trouvé</p>
+              <p className="text-muted-foreground">Aucun enfant trouvé avec les filtres appliqués</p>
             </div>
           )}
         </CardContent>

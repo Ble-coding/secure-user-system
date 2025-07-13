@@ -20,7 +20,8 @@ import {
   MoreHorizontal,
   Eye,
   Clock,
-  Mail
+  Mail,
+  User
 } from "lucide-react"
 import { ChildWithRelations } from "@/lib/api"
 
@@ -39,6 +40,12 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
     return lastActivity.type === 'entry' 
       ? <Badge className="bg-success text-success-foreground">Présent</Badge>
       : <Badge className="bg-destructive text-destructive-foreground">Sorti</Badge>
+  }
+
+  const getGenderBadge = (gender: "M" | "F") => {
+    return gender === "M" 
+      ? <Badge variant="outline" className="text-blue-600">Garçon</Badge>
+      : <Badge variant="outline" className="text-pink-600">Fille</Badge>
   }
 
   return (
@@ -61,8 +68,9 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
               <TableCell className="font-medium">
                 <div>
                   <div className="font-semibold">{child.first_name} {child.last_name}</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground flex items-center gap-2">
                     <Badge variant="outline" className="mr-1">{child.code}</Badge>
+                    {getGenderBadge(child.gender)}
                     {child.class && <Badge variant="outline">{child.class}</Badge>}
                   </div>
                 </div>
@@ -70,7 +78,10 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
               <TableCell>
                 {child.parent ? (
                   <div className="text-sm">
-                    <div className="font-medium">{child.parent.prenom} {child.parent.nom}</div>
+                    <div className="font-medium flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      {child.parent.prenom} {child.parent.nom}
+                    </div>
                     <div className="text-muted-foreground flex items-center gap-1">
                       <Mail className="w-3 h-3" />
                       {child.parent.email}
@@ -82,7 +93,7 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {child.recuperators.length > 0 ? (
+                  {child.recuperators && child.recuperators.length > 0 ? (
                     child.recuperators.slice(0, 2).map((recup) => (
                       <Badge key={recup.id} variant="outline" className="text-xs">
                         {recup.first_name} {recup.last_name}
@@ -91,7 +102,7 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
                   ) : (
                     <span className="text-muted-foreground text-sm">Aucun</span>
                   )}
-                  {child.recuperators.length > 2 && (
+                  {child.recuperators && child.recuperators.length > 2 && (
                     <Badge variant="outline" className="text-xs">
                       +{child.recuperators.length - 2}
                     </Badge>
@@ -100,8 +111,8 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
               </TableCell>
               <TableCell>
                 <div className="text-sm">
-                  <div className="text-success">↓ {child.entry_count}</div>
-                  <div className="text-destructive">↑ {child.exit_count}</div>
+                  <div className="text-success">↓ {child.entry_count || 0}</div>
+                  <div className="text-destructive">↑ {child.exit_count || 0}</div>
                 </div>
               </TableCell>
               <TableCell>{getStatusBadge(child)}</TableCell>
