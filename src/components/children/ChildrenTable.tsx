@@ -156,7 +156,7 @@ export function ChildrenTable({ children, onViewDetails, onRestore }: ChildrenTa
                       <Eye className="mr-2 h-4 w-4" />
                       Voir les détails
                     </DropdownMenuItem>
-                    {onRestore && (
+                    {onRestore && child.deleted_at && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="cursor-pointer" onClick={() => onRestore(child)}>
