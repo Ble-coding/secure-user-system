@@ -27,12 +27,14 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/lib/api"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function MonCompte() {
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { user: authUser } = useAuth()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -125,6 +127,46 @@ export default function MonCompte() {
     updatePasswordMutation.mutate(passwordData)
   }
 
+  // Fonction pour déterminer le rôle affiché
+  const getUserRole = () => {
+    if (!user) return "Utilisateur"
+    
+    // Si l'utilisateur a des rôles définis
+    if (user.roles && user.roles.length > 0) {
+      const role = user.roles[0]
+      return role === 'superadmin' ? 'Super Administrateur' : 
+             role === 'admin' ? 'Administrateur' : 
+             'Utilisateur'
+    }
+    
+    // Fallback basé sur le champ role
+    return user.role === 'superadmin' ? 'Super Administrateur' : 
+           user.role === 'admin' ? 'Administrateur' : 
+           'Utilisateur'
+  }
+
+  // Fonction pour obtenir l'année de création du compte
+  const getMemberSince = () => {
+    if (!user || !user.created_at) return new Date().getFullYear()
+    return new Date(user.created_at).getFullYear()
+  }
+
+  // Fonction pour formater la dernière connexion
+  const getLastLogin = () => {
+    if (!user || !user.last_login_at) return "Aujourd'hui"
+    
+    const lastLogin = new Date(user.last_login_at)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - lastLogin.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 1) return "Aujourd'hui"
+    if (diffDays === 2) return "Hier"
+    if (diffDays <= 7) return `Il y a ${diffDays} jours`
+    
+    return lastLogin.toLocaleDateString('fr-FR')
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -209,7 +251,7 @@ export default function MonCompte() {
                   <div className="text-center">
                     <h3 className="font-semibold text-lg">{user?.name || 'Utilisateur'}</h3>
                     <Badge className="bg-primary text-primary-foreground">
-                      Administrateur
+                      {getUserRole()}
                     </Badge>
                   </div>
                 </div>
@@ -217,11 +259,11 @@ export default function MonCompte() {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
-                  <span>Membre depuis {new Date().getFullYear()}</span>
+                  <span>Membre depuis {getMemberSince()}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Shield className="w-4 h-4" />
-                  <span>Dernière connexion: Aujourd'hui</span>
+                  <span>Dernière connexion: {getLastLogin()}</span>
                 </div>
               </CardContent>
             </Card>
@@ -285,7 +327,7 @@ export default function MonCompte() {
                       <Shield className="w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="role"
-                        value="Administrateur"
+                        value={getUserRole()}
                         disabled
                         className="border-0 bg-transparent"
                       />

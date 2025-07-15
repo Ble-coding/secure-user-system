@@ -16,9 +16,11 @@ import {
   Clock,
   ArrowDown,
   ArrowUp,
-  Mail
+  Mail,
+  Phone,
+  AlertTriangle
 } from "lucide-react"
-import { ChildWithRelations } from "@/lib/api"
+import { ChildWithRelations } from "@/lib/api/children"
 
 interface ChildDetailModalProps {
   child: ChildWithRelations | null
@@ -33,7 +35,15 @@ export function ChildDetailModal({ child, isOpen, onOpenChange }: ChildDetailMod
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Détails de l'enfant</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Détails de l'enfant
+            {child.deleted_at && (
+              <Badge variant="destructive" className="ml-2">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Supprimé
+              </Badge>
+            )}
+          </DialogTitle>
           <DialogDescription>
             Informations complètes sur l'enfant et ses activités
           </DialogDescription>
@@ -67,6 +77,14 @@ export function ChildDetailModal({ child, isOpen, onOpenChange }: ChildDetailMod
                     <strong>Classe:</strong> <Badge variant="outline">{child.class}</Badge>
                   </div>
                 )}
+                {child.deleted_at && (
+                  <div className="col-span-2">
+                    <strong>Supprimé le:</strong> 
+                    <span className="text-destructive ml-2">
+                      {new Date(child.deleted_at).toLocaleString('fr-FR')}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -86,6 +104,13 @@ export function ChildDetailModal({ child, isOpen, onOpenChange }: ChildDetailMod
                   <div className="flex items-center gap-1">
                     <Mail className="w-4 h-4" />
                     <strong>Email:</strong> {child.parent.email}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    <strong>Téléphone:</strong> {child.parent.telephone}
+                  </div>
+                  <div>
+                    <strong>Code parent:</strong> <Badge variant="outline">{child.parent.code}</Badge>
                   </div>
                 </div>
               </CardContent>

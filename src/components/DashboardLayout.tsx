@@ -5,12 +5,33 @@ import { Bell, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/hooks/useAuth"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user } = useAuth()
+
+  // Fonction pour déterminer le rôle affiché
+  const getUserRole = () => {
+    if (!user) return "Utilisateur"
+    
+    // Si l'utilisateur a des rôles définis
+    if (user.roles && user.roles.length > 0) {
+      const role = user.roles[0]
+      return role === 'superadmin' ? 'Super Administrateur' : 
+             role === 'admin' ? 'Administrateur' : 
+             'Utilisateur'
+    }
+    
+    // Fallback basé sur le champ role
+    return user.role === 'superadmin' ? 'Super Administrateur' : 
+           user.role === 'admin' ? 'Administrateur' : 
+           'Utilisateur'
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -41,14 +62,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 
                 <div className="flex items-center gap-3">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src="/placeholder-user.jpg" />
+                    <AvatarImage src={user?.photo} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      AD
+                      {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block">
-                    <p className="text-sm font-medium text-foreground">Admin User</p>
-                    <p className="text-xs text-muted-foreground">Administrateur</p>
+                    <p className="text-sm font-medium text-foreground">{user?.name || 'Utilisateur'}</p>
+                    <p className="text-xs text-muted-foreground">{getUserRole()}</p>
                   </div>
                 </div>
               </div>
