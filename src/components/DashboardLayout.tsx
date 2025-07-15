@@ -18,7 +18,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getUserRole = () => {
     if (!user) return "Utilisateur"
     
-    // Si l'utilisateur a des rôles définis
+    // Si l'utilisateur a des rôles définis (array)
     if (user.roles && user.roles.length > 0) {
       const role = user.roles[0]
       return role === 'superadmin' ? 'Super Administrateur' : 
@@ -26,7 +26,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
              'Utilisateur'
     }
     
-    // Fallback basé sur le champ role
+    // Fallback basé sur le champ role (string)
     return user.role === 'superadmin' ? 'Super Administrateur' : 
            user.role === 'admin' ? 'Administrateur' : 
            'Utilisateur'
@@ -62,7 +62,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 
                 <div className="flex items-center gap-3">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={user?.photo} />
+                    <AvatarImage src={user?.photo || undefined} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                       {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                     </AvatarFallback>

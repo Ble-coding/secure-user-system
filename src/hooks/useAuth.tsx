@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +7,8 @@ interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
+  photo?: string;
 }
 
 interface AuthContextType {
