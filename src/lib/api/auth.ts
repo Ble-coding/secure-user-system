@@ -1,6 +1,9 @@
 
 import { apiRequest } from './config';
+import { User } from '@/types/User';
+import { ApiResponse } from '@/types/api';
 
+// Requêtes
 export interface LoginRequest {
   email: string;
   password: string;
@@ -14,7 +17,7 @@ export interface RegisterRequest {
 
 export interface LoginResponse {
   token: string;
-  user: any;
+  user: User;
 }
 
 export interface UpdateProfileRequest {
@@ -31,16 +34,16 @@ export interface UpdatePasswordRequest {
 
 export const authService = {
   register: (credentials: RegisterRequest) =>
-    apiRequest<LoginResponse>('/users/access', {
+    apiRequest<{ data: LoginResponse }>('/users/access', {
       method: 'POST',
       body: JSON.stringify(credentials),
-    }),
+    }).then(res => res.data),
 
   login: (credentials: LoginRequest) =>
-    apiRequest<LoginResponse>('/users/login', {
+    apiRequest<{ data: LoginResponse }>('/users/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
-    }),
+    }).then(res => res.data),
 
   logout: () =>
     apiRequest('/users/logout', {
@@ -48,25 +51,33 @@ export const authService = {
     }),
 
   me: () =>
-    apiRequest<any>('/users/me'),
+    apiRequest<ApiResponse<{ user: User }>>('/users/me', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    }).then(res => res.data.user),
 
   updateProfile: (data: UpdateProfileRequest) =>
-    apiRequest<any>('/users/me/update-info', {
+    apiRequest<ApiResponse<{ user: User }>>('/users/me/update-info', {
       method: 'PUT',
       body: JSON.stringify(data),
-    }),
+    }).then(res => res.data.user),
 
   updatePassword: (data: UpdatePasswordRequest) =>
-    apiRequest<any>('/users/me/update-secret', {
+    apiRequest('/users/me/update-secret', {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        current_secret: data.current_password,
+        new_secret: data.password,
+        new_secret_confirmation: data.password_confirmation,
+      }),
     }),
 
   updatePhoto: (photoFile: File) => {
     const formData = new FormData();
     formData.append('photo', photoFile);
-    
-    return apiRequest<any>('/users/me/update-photo', {
+
+    return apiRequest<ApiResponse<{ user: User }>>('/users/me/update-photo', {
       method: 'PUT',
       body: formData,
       headers: {
@@ -74,13 +85,13 @@ export const authService = {
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
       },
-    });
+    }).then(res => res.data.user);
   },
 
   refreshToken: () =>
-    apiRequest<LoginResponse>('/users/refresh-token', {
+    apiRequest<{ data: LoginResponse }>('/users/refresh-token', {
       method: 'POST',
-    }),
+    }).then(res => res.data),
 
   logoutAll: () =>
     apiRequest('/users/logout-all', {

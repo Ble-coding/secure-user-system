@@ -1,15 +1,8 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  roles?: string[];
-  photo?: string;
-}
+import { User } from '@/types/User';
 
 interface AuthContextType {
   user: User | null;
@@ -68,36 +61,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      // Appeler l'API de déconnexion
       await authService.logout();
-      
-      // Nettoyer le localStorage
       localStorage.removeItem('auth_token');
-      
-      // Reset l'état utilisateur
       setUser(null);
-      
       toast({ 
         title: "Déconnexion réussie",
         description: "Vous avez été déconnecté avec succès"
       });
-      
-      // Redirection vers la page de connexion
       window.location.href = '/login';
-      
     } catch (error: any) {
       console.error('Logout failed:', error);
-      
-      // Même en cas d'erreur API, on déconnecte localement
       localStorage.removeItem('auth_token');
       setUser(null);
-      
       toast({
         title: "Déconnexion",
         description: "Vous avez été déconnecté localement",
         variant: "destructive"
       });
-      
       window.location.href = '/login';
     }
   };

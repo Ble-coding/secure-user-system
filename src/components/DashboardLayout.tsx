@@ -18,18 +18,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getUserRole = () => {
     if (!user) return "Utilisateur"
     
-    // Si l'utilisateur a des rôles définis (array)
-    if (user.roles && user.roles.length > 0) {
-      const role = user.roles[0]
-      return role === 'superadmin' ? 'Super Administrateur' : 
-             role === 'admin' ? 'Administrateur' : 
-             'Utilisateur'
-    }
+    const roleName = user.roles?.[0]?.name
     
-    // Fallback basé sur le champ role (string)
-    return user.role === 'superadmin' ? 'Super Administrateur' : 
-           user.role === 'admin' ? 'Administrateur' : 
-           'Utilisateur'
+    return roleName === 'superadmin'
+      ? 'Super Administrateur'
+      : roleName === 'admin'
+      ? 'Administrateur'
+      : 'Utilisateur'
   }
 
   return (

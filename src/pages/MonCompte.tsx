@@ -6,13 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 import { 
   User, 
   Mail, 
   Phone, 
-  MapPin, 
   Calendar, 
   Edit, 
   Key, 
@@ -20,9 +19,9 @@ import {
   Camera,
   Save,
   Bell,
-  Settings,
   Activity,
-  Lock
+  Lock,
+  Upload
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/lib/api"
@@ -79,16 +78,25 @@ export default function MonCompte() {
 
   const updateProfileMutation = useMutation({
     mutationFn: authService.updateProfile,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+    onSuccess: (updatedUser) => {
+      // Mettre à jour le cache avec les nouvelles données
+      queryClient.setQueryData(['user-profile'], updatedUser)
+      
+      // Mettre à jour le contexte d'authentification si nécessaire
+      if (authUser) {
+        // Force la mise à jour du contexte
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      }
+      
       toast({ title: "Profil mis à jour avec succès" })
       setIsEditing(false)
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { message?: string }
       console.error('Error updating profile:', error)
       toast({ 
         title: "Erreur lors de la mise à jour", 
-        description: error.message || "Une erreur est survenue",
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
       })
     },
@@ -100,11 +108,29 @@ export default function MonCompte() {
       toast({ title: "Mot de passe changé avec succès" })
       setPasswordData({ current_password: "", password: "", password_confirmation: "" })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { message?: string }
       console.error('Error updating password:', error)
       toast({ 
         title: "Erreur lors du changement de mot de passe", 
-        description: error.message || "Une erreur est survenue",
+        description: err.message || "Une erreur est survenue",
+        variant: "destructive" 
+      })
+    },
+  })
+
+  const updatePhotoMutation = useMutation({
+    mutationFn: authService.updatePhoto,
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(['user-profile'], updatedUser)
+      toast({ title: "Photo mise à jour avec succès" })
+    },
+    onError: (error: unknown) => {
+      const err = error as { message?: string }
+      console.error('Error updating photo:', error)
+      toast({ 
+        title: "Erreur lors de la mise à jour de la photo", 
+        description: err.message || "Une erreur est survenue",
         variant: "destructive" 
       })
     },
@@ -127,44 +153,68 @@ export default function MonCompte() {
     updatePasswordMutation.mutate(passwordData)
   }
 
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      updatePhotoMutation.mutate(file)
+    }
+  }
+
+  const handleNotificationChange = (type: keyof typeof notifications) => {
+    setNotifications(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }))
+    
+    // Sauvegarder les préférences (localement pour l'instant)
+    localStorage.setItem('notifications', JSON.stringify({
+      ...notifications,
+      [type]: !notifications[type]
+    }))
+    
+    toast({ 
+      title: "Préférences sauvegardées",
+      description: "Vos préférences de notification ont été mises à jour"
+    })
+  }
+
+  const handleSecurityChange = (type: keyof typeof security) => {
+    setSecurity(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }))
+    
+    toast({ 
+      title: "Paramètres de sécurité mis à jour",
+      description: `${type === 'twoFactor' ? 'Authentification à deux facteurs' : 'Alertes de connexion'} ${!security[type] ? 'activé' : 'désactivé'}`
+    })
+  }
+
+  // Charger les préférences depuis le localStorage
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('notifications')
+    if (savedNotifications) {
+      setNotifications(JSON.parse(savedNotifications))
+    }
+  }, [])
+
   // Fonction pour déterminer le rôle affiché
   const getUserRole = () => {
     if (!user) return "Utilisateur"
     
-    // Si l'utilisateur a des rôles définis
-    if (user.roles && user.roles.length > 0) {
-      const role = user.roles[0]
-      return role === 'superadmin' ? 'Super Administrateur' : 
-             role === 'admin' ? 'Administrateur' : 
-             'Utilisateur'
-    }
+    const roleName = user.roles?.[0]?.name
     
-    // Fallback basé sur le champ role
-    return user.role === 'superadmin' ? 'Super Administrateur' : 
-           user.role === 'admin' ? 'Administrateur' : 
-           'Utilisateur'
+    return roleName === 'superadmin'
+      ? 'Super Administrateur'
+      : roleName === 'admin'
+      ? 'Administrateur'
+      : 'Utilisateur'
   }
 
   // Fonction pour obtenir l'année de création du compte
   const getMemberSince = () => {
     if (!user || !user.created_at) return new Date().getFullYear()
     return new Date(user.created_at).getFullYear()
-  }
-
-  // Fonction pour formater la dernière connexion
-  const getLastLogin = () => {
-    if (!user || !user.last_login_at) return "Aujourd'hui"
-    
-    const lastLogin = new Date(user.last_login_at)
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - lastLogin.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
-    if (diffDays === 1) return "Aujourd'hui"
-    if (diffDays === 2) return "Hier"
-    if (diffDays <= 7) return `Il y a ${diffDays} jours`
-    
-    return lastLogin.toLocaleDateString('fr-FR')
   }
 
   if (isLoading) {
@@ -238,15 +288,28 @@ export default function MonCompte() {
                         {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    {isEditing && (
+                    <div className="absolute -bottom-2 -right-2">
+                      <input
+                        type="file"
+                        id="photo-upload"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
                       <Button 
                         size="icon" 
                         variant="secondary"
-                        className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full"
+                        onClick={() => document.getElementById('photo-upload')?.click()}
+                        disabled={updatePhotoMutation.isPending}
                       >
-                        <Camera className="w-4 h-4" />
+                        {updatePhotoMutation.isPending ? (
+                          <Upload className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Camera className="w-4 h-4" />
+                        )}
                       </Button>
-                    )}
+                    </div>
                   </div>
                   <div className="text-center">
                     <h3 className="font-semibold text-lg">{user?.name || 'Utilisateur'}</h3>
@@ -260,10 +323,6 @@ export default function MonCompte() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
                   <span>Membre depuis {getMemberSince()}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4" />
-                  <span>Dernière connexion: {getLastLogin()}</span>
                 </div>
               </CardContent>
             </Card>
@@ -362,6 +421,7 @@ export default function MonCompte() {
                         type="password"
                         value={passwordData.current_password}
                         onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
+                        placeholder="Entrez votre mot de passe actuel"
                       />
                     </div>
                     <div className="space-y-2">
@@ -371,6 +431,7 @@ export default function MonCompte() {
                         type="password"
                         value={passwordData.password}
                         onChange={(e) => setPasswordData({...passwordData, password: e.target.value})}
+                        placeholder="Entrez le nouveau mot de passe"
                       />
                     </div>
                     <div className="space-y-2">
@@ -380,11 +441,12 @@ export default function MonCompte() {
                         type="password"
                         value={passwordData.password_confirmation}
                         onChange={(e) => setPasswordData({...passwordData, password_confirmation: e.target.value})}
+                        placeholder="Confirmez le nouveau mot de passe"
                       />
                     </div>
                     <Button 
                       onClick={handlePasswordChange}
-                      disabled={updatePasswordMutation.isPending}
+                      disabled={updatePasswordMutation.isPending || !passwordData.current_password || !passwordData.password}
                       className="w-fit"
                     >
                       <Key className="w-4 h-4 mr-2" />
@@ -393,30 +455,26 @@ export default function MonCompte() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Authentification à deux facteurs</h4>
                     <p className="text-sm text-muted-foreground">Ajoutez une couche de sécurité supplémentaire</p>
                   </div>
-                  <Button 
-                    variant={security.twoFactor ? "default" : "outline"}
-                    onClick={() => setSecurity({...security, twoFactor: !security.twoFactor})}
-                  >
-                    {security.twoFactor ? "Activé" : "Désactivé"}
-                  </Button>
+                  <Switch 
+                    checked={security.twoFactor}
+                    onCheckedChange={() => handleSecurityChange('twoFactor')}
+                  />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Alertes de connexion</h4>
                     <p className="text-sm text-muted-foreground">Recevez des notifications pour les nouvelles connexions</p>
                   </div>
-                  <Button 
-                    variant={security.loginAlerts ? "default" : "outline"}
-                    onClick={() => setSecurity({...security, loginAlerts: !security.loginAlerts})}
-                  >
-                    {security.loginAlerts ? "Activé" : "Désactivé"}
-                  </Button>
+                  <Switch 
+                    checked={security.loginAlerts}
+                    onCheckedChange={() => handleSecurityChange('loginAlerts')}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -436,43 +494,47 @@ export default function MonCompte() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Notifications par email</h4>
                     <p className="text-sm text-muted-foreground">Recevez des mises à jour par email</p>
                   </div>
-                  <Button 
-                    variant={notifications.email ? "default" : "outline"}
-                    onClick={() => setNotifications({...notifications, email: !notifications.email})}
-                  >
-                    {notifications.email ? "Activé" : "Désactivé"}
-                  </Button>
+                  <Switch 
+                    checked={notifications.email}
+                    onCheckedChange={() => handleNotificationChange('email')}
+                  />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Notifications push</h4>
                     <p className="text-sm text-muted-foreground">Recevez des notifications dans votre navigateur</p>
                   </div>
-                  <Button 
-                    variant={notifications.push ? "default" : "outline"}
-                    onClick={() => setNotifications({...notifications, push: !notifications.push})}
-                  >
-                    {notifications.push ? "Activé" : "Désactivé"}
-                  </Button>
+                  <Switch 
+                    checked={notifications.push}
+                    onCheckedChange={() => handleNotificationChange('push')}
+                  />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Notifications SMS</h4>
                     <p className="text-sm text-muted-foreground">Recevez des alertes importantes par SMS</p>
                   </div>
-                  <Button 
-                    variant={notifications.sms ? "default" : "outline"}
-                    onClick={() => setNotifications({...notifications, sms: !notifications.sms})}
-                  >
-                    {notifications.sms ? "Activé" : "Désactivé"}
-                  </Button>
+                  <Switch 
+                    checked={notifications.sms}
+                    onCheckedChange={() => handleNotificationChange('sms')}
+                  />
+                </div>
+
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h5 className="font-medium mb-2">Types de notifications</h5>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• Connexions et déconnexions</p>
+                    <p>• Modifications du profil</p>
+                    <p>• Alertes de sécurité</p>
+                    <p>• Mises à jour système</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -495,9 +557,9 @@ export default function MonCompte() {
                 {[
                   { action: "Connexion au système", time: "Il y a 5 min", type: "login" },
                   { action: "Modification du profil", time: "Il y a 2h", type: "update" },
-                  { action: "Scan QR Code", time: "Il y a 3h", type: "scan" },
-                  { action: "Ajout d'un nouvel agent", time: "Hier", type: "create" },
-                  { action: "Génération de rapport", time: "Il y a 2 jours", type: "report" },
+                  { action: "Changement de mot de passe", time: "Il y a 3h", type: "security" },
+                  { action: "Mise à jour des notifications", time: "Hier", type: "settings" },
+                  { action: "Connexion depuis un nouvel appareil", time: "Il y a 2 jours", type: "login" },
                 ].map((activity, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
