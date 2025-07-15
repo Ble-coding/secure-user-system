@@ -16,6 +16,7 @@ export default function Children() {
   const [entryFilter, setEntryFilter] = useState<"all" | "entry" | "exit">("all")
   const [genderFilter, setGenderFilter] = useState<"all" | "M" | "F">("all")
   const [classFilter, setClassFilter] = useState("")
+  const [parentCodeFilter, setParentCodeFilter] = useState("")
   const [selectedChild, setSelectedChild] = useState<ChildWithRelations | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
@@ -60,6 +61,11 @@ export default function Children() {
 
     // Filter by class
     if (classFilter && child.class && !child.class.toLowerCase().includes(classFilter.toLowerCase())) {
+      return false
+    }
+
+    // Filter by parent code
+    if (parentCodeFilter && child.parent?.code && !child.parent.code.toLowerCase().includes(parentCodeFilter.toLowerCase())) {
       return false
     }
 
@@ -144,6 +150,8 @@ export default function Children() {
             setGenderFilter={setGenderFilter}
             classFilter={classFilter}
             setClassFilter={setClassFilter}
+            parentCodeFilter={parentCodeFilter}
+            setParentCodeFilter={setParentCodeFilter}
           />
 
           <ChildrenTable

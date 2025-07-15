@@ -4,6 +4,7 @@ import { Child } from './types';
 import { ApiResponse } from '@/types/api';
 
 interface ChildWithRelations extends Child {
+  deleted_at?: string | null;
   parent?: {
     id: number;
     prenom: string;
