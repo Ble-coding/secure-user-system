@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { 
@@ -23,16 +24,18 @@ import {
   Mail,
   User,
   Phone,
-  Hash
+  Hash,
+  RotateCcw
 } from "lucide-react"
 import { ChildWithRelations } from "@/lib/api/children"
 
 interface ChildrenTableProps {
   children: ChildWithRelations[]
   onViewDetails: (child: ChildWithRelations) => void
+  onRestore?: (child: ChildWithRelations) => void
 }
 
-export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
+export function ChildrenTable({ children, onViewDetails, onRestore }: ChildrenTableProps) {
   const getStatusBadge = (child: ChildWithRelations) => {
     const lastActivity = child.last_activities?.[0]
     if (!lastActivity) {
@@ -153,6 +156,15 @@ export function ChildrenTable({ children, onViewDetails }: ChildrenTableProps) {
                       <Eye className="mr-2 h-4 w-4" />
                       Voir les détails
                     </DropdownMenuItem>
+                    {onRestore && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => onRestore(child)}>
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Restaurer
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
