@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Control } from "react-hook-form"
 import { ParentFormData } from "./schemas"
-import { RELATION_OPTIONS } from "./constants"
+// import { RELATION_OPTIONS } from "./constants"
+import { RelationSelect } from "@/components/form/RelationSelect"
 
 interface RecuperatorSectionProps {
   control: Control<ParentFormData>
@@ -72,30 +73,23 @@ export function RecuperatorSection({ control, isReadOnly, mode }: RecuperatorSec
             )}
           />
 
-          <FormField
-            control={control}
-            name="recuperator.relation_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Relation</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {RELATION_OPTIONS.map((relation) => (
-                      <SelectItem key={relation} value={relation}>
-                        {relation}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      
+<FormField
+  control={control}
+  name="recuperator.relation_type"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Relation</FormLabel>
+      <FormControl>
+        <RelationSelect value={field.value || ""} onChange={field.onChange} disabled={isReadOnly} />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+
+
         </div>
 
         <div className="grid grid-cols-2 gap-4">

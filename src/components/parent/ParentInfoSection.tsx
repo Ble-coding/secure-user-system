@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Control } from "react-hook-form"
 import { ParentFormData } from "./schemas"
-
+import { BASE_URL } from "@/lib/api/config"
 interface ParentInfoSectionProps {
   control: Control<ParentFormData>
   isReadOnly: boolean
@@ -114,13 +114,18 @@ export function ParentInfoSection({ control, isReadOnly }: ParentInfoSectionProp
         </div>
 
         <div className="grid grid-cols-3 gap-4">
+              {/* Sexe */}
           <FormField
             control={control}
             name="sexe"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Sexe</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? ""}
+                  disabled={isReadOnly}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner" />
@@ -150,20 +155,32 @@ export function ParentInfoSection({ control, isReadOnly }: ParentInfoSectionProp
             )}
           />
 
-          <FormField
+       <FormField
             control={control}
             name="photo"
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, value, ...rest } }) => (
               <FormItem>
                 <FormLabel>Photo</FormLabel>
                 <FormControl>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => onChange(e.target.files?.[0])}
-                    disabled={isReadOnly}
-                    {...field}
-                  />
+                  <div className="space-y-2">
+                    {typeof value === "string" && value && (
+                      <a
+                        href={`${BASE_URL}/storage/${value}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline text-sm"
+                      >
+                        Voir la photo actuelle
+                      </a>
+                    )}
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => onChange(e.target.files?.[0])}
+                      disabled={isReadOnly}
+                      {...rest}
+                    />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -209,20 +226,33 @@ export function ParentInfoSection({ control, isReadOnly }: ParentInfoSectionProp
             )}
           />
 
+ {/* Fichier document */}
           <FormField
             control={control}
             name="document_file"
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, value, ...rest } }) => (
               <FormItem>
-                <FormLabel>Document</FormLabel>
+                <FormLabel>Fichier du document</FormLabel>
                 <FormControl>
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => onChange(e.target.files?.[0])}
-                    disabled={isReadOnly}
-                    {...field}
-                  />
+                  <div className="space-y-2">
+                    {typeof value === "string" && value && (
+                      <a
+                        href={`${BASE_URL}/storage/${value}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline text-sm"
+                      >
+                        Voir le document actuel
+                      </a>
+                    )}
+                    <Input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => onChange(e.target.files?.[0])}
+                      disabled={isReadOnly}
+                      {...rest}
+                    />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

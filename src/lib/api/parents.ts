@@ -1,6 +1,7 @@
 import { apiRequest } from './config'
 import { ApiResponse } from '@/types/api'
 import { ParentUser, PaginatedParentResponse } from '@/types/Parent'
+import { Child } from '@/types/Child'
 
 export const parentService = {
   // 🔎 Récupérer tous les parents (avec pagination, recherche, filtre)
@@ -43,6 +44,7 @@ export const parentService = {
     apiRequest<ApiResponse<null>>(`/users/parents/${encodeURIComponent(code)}`, {
       method: 'DELETE',
     }),
+
 
   // ♻️ Restaurer un parent supprimé (soft deleted)
   restore: (code: string) =>

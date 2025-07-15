@@ -16,6 +16,17 @@ export const getAuthHeaders = () => {
   };
 };
 
+
+// Fonction pour gérer la déconnexion automatique
+const handleUnauthorized = () => {
+  localStorage.removeItem('auth_token')
+  // Rediriger vers la page de connexion
+  if (window.location.pathname !== '/auth/login') {
+    window.location.href = '/auth/login'
+  }
+}
+
+
 // Fonction générique pour les requêtes API
 export const apiRequest = async <T>(
   endpoint: string,
@@ -49,11 +60,16 @@ export const apiRequest = async <T>(
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    console.error('API Error Response:', data);
+    console.error('❌ API Error Response:', data);
+
+    if (response.status === 401) {
+      console.warn("🔐 Token invalide ou expiré → redirection")
+      handleUnauthorized()
+    }
+
     const message = data?.message || 'Erreur inconnue';
     throw new Error(message);
   }
-
   console.log('API Response Data:', data);
   return data;
 };

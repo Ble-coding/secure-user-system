@@ -1,7 +1,8 @@
 import * as z from "zod"
 
 export const childSchema = z.object({
-  id: z.number().optional(),
+  // id: z.number().optional(),
+     dbId: z.number().optional(),  
   first_name: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
   last_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   gender: z.enum(["M", "F"], { message: "Sélectionnez le genre" }),

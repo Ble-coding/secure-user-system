@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -7,18 +6,25 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { Agent } from '@/types/Agent'
+import { ParentUser } from '@/types/Parent'
+import { Child } from '@/types/Child'
+import { Recuperator } from '@/types/Recuperator'
+import { User } from '@/lib/api/types'
+
+type EntityData = User | Agent | ParentUser | Child | Recuperator | Record<string, unknown>
 
 interface CrudModalProps {
   isOpen: boolean
   onClose: () => void
   mode: 'create' | 'edit' | 'view'
   entity: 'user' | 'agent' | 'parent' | 'child' | 'recuperator'
-  data?: any
-  onSave?: (data: any) => void
+  data?: EntityData
+  onSave?: (data: EntityData) => void | Promise<void>
 }
 
 export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudModalProps) {
-  const [formData, setFormData] = useState(data || {})
+  const [formData, setFormData] = useState<EntityData>(data || {})
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -56,6 +62,10 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
     return `${actions[mode]} ${entities[entity]}`
   }
 
+  const updateFormData = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value })
+  }
+
   const renderFields = () => {
     const commonFields = (
       <>
@@ -64,8 +74,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
             <Label htmlFor="first_name">Prénom</Label>
             <Input
               id="first_name"
-              value={formData.first_name || ''}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+              value={(formData as Agent | Child | Recuperator).first_name || ''}
+              onChange={(e) => updateFormData('first_name', e.target.value)}
               disabled={mode === 'view'}
             />
           </div>
@@ -73,8 +83,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
             <Label htmlFor="last_name">Nom</Label>
             <Input
               id="last_name"
-              value={formData.last_name || ''}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              value={(formData as Agent | Child | Recuperator).last_name || ''}
+              onChange={(e) => updateFormData('last_name', e.target.value)}
               disabled={mode === 'view'}
             />
           </div>
@@ -84,8 +94,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
           <Input
             id="email"
             type="email"
-            value={formData.email || ''}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            value={(formData as Agent | User).email || ''}
+            onChange={(e) => updateFormData('email', e.target.value)}
             disabled={mode === 'view'}
           />
         </div>
@@ -93,8 +103,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
           <Label htmlFor="phone">Téléphone</Label>
           <Input
             id="phone"
-            value={formData.phone || ''}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            value={(formData as Agent | Recuperator).phone || ''}
+            onChange={(e) => updateFormData('phone', e.target.value)}
             disabled={mode === 'view'}
           />
         </div>
@@ -108,7 +118,11 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
             {commonFields}
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
-              <Select value={formData.type || ''} onValueChange={(value) => setFormData({ ...formData, type: value })} disabled={mode === 'view'}>
+              <Select 
+                value={(formData as Agent).type || ''} 
+                onValueChange={(value) => updateFormData('type', value)} 
+                disabled={mode === 'view'}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un type" />
                 </SelectTrigger>
@@ -116,6 +130,7 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
                   <SelectItem value="enseignant">Enseignant</SelectItem>
                   <SelectItem value="surveillant">Surveillant</SelectItem>
                   <SelectItem value="sécurité">Sécurité</SelectItem>
+                  <SelectItem value="administration">Administration</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -130,8 +145,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
                 <Label htmlFor="nom">Nom</Label>
                 <Input
                   id="nom"
-                  value={formData.nom || ''}
-                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                  value={(formData as ParentUser).nom || ''}
+                  onChange={(e) => updateFormData('nom', e.target.value)}
                   disabled={mode === 'view'}
                 />
               </div>
@@ -139,8 +154,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
                 <Label htmlFor="prenom">Prénom</Label>
                 <Input
                   id="prenom"
-                  value={formData.prenom || ''}
-                  onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
+                  value={(formData as ParentUser).prenom || ''}
+                  onChange={(e) => updateFormData('prenom', e.target.value)}
                   disabled={mode === 'view'}
                 />
               </div>
@@ -150,8 +165,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
               <Input
                 id="email"
                 type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                value={(formData as ParentUser).email || ''}
+                onChange={(e) => updateFormData('email', e.target.value)}
                 disabled={mode === 'view'}
               />
             </div>
@@ -159,8 +174,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
               <Label htmlFor="telephone">Téléphone</Label>
               <Input
                 id="telephone"
-                value={formData.telephone || ''}
-                onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                value={(formData as ParentUser).telephone || ''}
+                onChange={(e) => updateFormData('telephone', e.target.value)}
                 disabled={mode === 'view'}
               />
             </div>
@@ -168,8 +183,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
               <Label htmlFor="adresse">Adresse</Label>
               <Textarea
                 id="adresse"
-                value={formData.adresse || ''}
-                onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+                value={(formData as ParentUser).adresse || ''}
+                onChange={(e) => updateFormData('adresse', e.target.value)}
                 disabled={mode === 'view'}
               />
             </div>
@@ -183,7 +198,11 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gender">Genre</Label>
-                <Select value={formData.gender || ''} onValueChange={(value) => setFormData({ ...formData, gender: value })} disabled={mode === 'view'}>
+                <Select 
+                  value={(formData as Child).gender || ''} 
+                  onValueChange={(value) => updateFormData('gender', value)} 
+                  disabled={mode === 'view'}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
@@ -197,8 +216,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
                 <Label htmlFor="class">Classe</Label>
                 <Input
                   id="class"
-                  value={formData.class || ''}
-                  onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                  value={(formData as Child).class || ''}
+                  onChange={(e) => updateFormData('class', e.target.value)}
                   disabled={mode === 'view'}
                 />
               </div>
@@ -208,8 +227,8 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
               <Input
                 id="date_of_birth"
                 type="date"
-                value={formData.date_of_birth || ''}
-                onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                value={(formData as Child).date_of_birth || ''}
+                onChange={(e) => updateFormData('date_of_birth', e.target.value)}
                 disabled={mode === 'view'}
               />
             </div>
@@ -222,7 +241,11 @@ export function CrudModal({ isOpen, onClose, mode, entity, data, onSave }: CrudM
             {commonFields}
             <div className="space-y-2">
               <Label htmlFor="relation_type">Type de relation</Label>
-              <Select value={formData.relation_type || ''} onValueChange={(value) => setFormData({ ...formData, relation_type: value })} disabled={mode === 'view'}>
+              <Select 
+                value={(formData as Recuperator).relation_type || ''} 
+                onValueChange={(value) => updateFormData('relation_type', value)} 
+                disabled={mode === 'view'}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>

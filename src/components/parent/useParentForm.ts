@@ -62,36 +62,40 @@ export function useParentForm({ parent, mode, isOpen, onClose }: UseParentFormPr
   })
 
   useEffect(() => {
-    if (isOpen) {
-      if (parent && mode !== "create") {
-        form.reset({
-          nom: parent.nom || "",
-          prenom: parent.prenom || "",
-          email: parent.email || "",
-          telephone: parent.telephone || "",
-          adresse: parent.adresse || "",
-          ville: parent.ville || "",
-          date_naissance: parent.date_naissance || "",
-          sexe: parent.sexe as "M" | "F" | undefined,
-          document_type: parent.document_type || "",
-          document_numero: parent.document_numero || "",
-          children: parent.children?.map(child => ({
-            id: child.id,
-            first_name: child.first_name,
-            last_name: child.last_name,
-            gender: child.gender as "M" | "F",
-            date_of_birth: child.date_of_birth,
-            class: child.class || "",
-            enrolled_at: child.enrolled_at || "",
-          })) || [{ 
-            first_name: "", 
-            last_name: "", 
-            gender: "M" as const, 
-            date_of_birth: "",
-            class: "",
-            enrolled_at: "",
-          }],
-          recuperator: {
+      if (isOpen) {
+    if (parent && mode !== "create") {
+      form.reset({
+        nom: parent.nom || "",
+        prenom: parent.prenom || "",
+        email: parent.email || "",
+        telephone: parent.telephone || "",
+        adresse: parent.adresse || "",
+        ville: parent.ville || "",
+        date_naissance: parent.date_naissance || "",
+        sexe: parent.sexe as "M" | "F" | undefined,
+        document_type: parent.document_type || "",
+        document_numero: parent.document_numero || "",
+        photo: parent.photo || "", // ✅ important pour l’aperçu
+        document_file: parent.document_file || "", // ✅ pour le lien du document
+
+        children: parent.children?.map(child => ({
+          // id: child.id,
+             dbId: child.id,    
+          first_name: child.first_name,
+          last_name: child.last_name,
+          gender: child.gender as "M" | "F",
+          date_of_birth: child.date_of_birth,
+          class: child.class || "",
+          enrolled_at: child.enrolled_at || "",
+        })) || [{
+          first_name: "",
+          last_name: "",
+          gender: "M" as const,
+          date_of_birth: "",
+          class: "",
+          enrolled_at: "",
+        }],
+    recuperator: {
             first_name: "",
             last_name: "",
             phone: "",
@@ -174,7 +178,7 @@ export function useParentForm({ parent, mode, isOpen, onClose }: UseParentFormPr
 
     // Enfants (JSON stringifié selon l'API)
     const childrenData = data.children.map(child => ({
-      ...(child.id && { id: child.id }),
+      ...(child.dbId && { id: child.dbId }),
       first_name: child.first_name,
       last_name: child.last_name,
       gender: child.gender,
