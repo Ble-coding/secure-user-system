@@ -39,38 +39,7 @@ update: (code: string, formData: FormData): Promise<ApiResponse<Recuperator>> =>
   }),
 
 
-    getParentsSelect: (page = 1, search = "") =>
-  apiRequest<ApiResponse<PaginatedParentResponse>>(
-    `/users/parents/parents-select-all?page=${page}&search=${encodeURIComponent(search)}`
-  ),
-
-// getParentByCode: async (code: string): Promise<ApiResponse<ParentUser>> => {
-//   return await apiRequest<ApiResponse<ParentUser>>(
-//     `/users/parents/${code}`,
-//     {
-//       headers: {
-//         Accept: 'application/json',
-//         Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-//       },
-//     }
-//   )
-// },
-
-
-getParentByCode: async (code: string): Promise<ParentUser> => {
-  const response = await apiRequest<ApiResponse<ParentUser>>(
-    `/users/parents/${code}`,
-    {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    }
-  )
-  // return response.data // on retourne directement les données du parent
-    return response.data.data
-},
-
+ 
 
 
 // getParentByCode: async (code: string): Promise<ParentUser> => {

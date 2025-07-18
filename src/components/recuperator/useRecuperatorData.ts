@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { recuperatorService } from "@/lib/api/recuperators"
+import { parentService } from "@/lib/api/parents"
 import { childService } from "@/lib/api/children"
 import { useState } from "react"
 import { ApiResponse } from "@/types/api"
@@ -12,7 +12,7 @@ export function useRecuperatorData(selectedParentCode?: string | null) {
   // 🔍 Liste paginée de parents
   const { data: parentsResponse } = useQuery({
     queryKey: ["parents", "select", search, page],
-    queryFn: () => recuperatorService.getParentsSelect(page, search),
+    queryFn: () => parentService.getParentsSelect(page, search),
     placeholderData: () => ({
       status: true,
       message: "Chargement...",
@@ -36,33 +36,22 @@ export function useRecuperatorData(selectedParentCode?: string | null) {
   const selectedParentInPage = parents.find((p) =>
   p.code?.toLowerCase() === selectedParentCode?.toLowerCase()
 )
-  // const { data: selectedParentData } = useQuery({
-  //   queryKey: ["parents", "single", selectedParentCode],
-  //   queryFn: () => recuperatorService.getParentByCode(selectedParentCode!),
-  //   enabled: !!selectedParentCode && !selectedParentInPage,
-  // })
+
 
 const { data: selectedParentData } = useQuery<ParentUser>({
   queryKey: ["parents", "single", selectedParentCode],
-  queryFn: () => recuperatorService.getParentByCode(selectedParentCode!),
+  queryFn: () => parentService.getParentByCode(selectedParentCode!),
   enabled: !!selectedParentCode && !selectedParentInPage,
 });
 
-
 // const { data: selectedParentData } = useQuery<ParentUser>({
 //   queryKey: ["parents", "single", selectedParentCode],
-//   queryFn: () => recuperatorService.getParentByCode(selectedParentCode!),
+//   queryFn: async () => {
+//     const response = await parentService.getParentByCode(selectedParentCode!)
+//    return response?.data ?? null// ✅ extraire le `data` attendu
+//   },
 //   enabled: !!selectedParentCode && !selectedParentInPage,
-// })
-
-
-// const { data: selectedParentResponse } = useQuery<ApiResponse<ParentUser>>({
-//   queryKey: ["parents", "single", selectedParentCode],
-//   queryFn: () => recuperatorService.getParentByCode(selectedParentCode!),
-//   enabled: !!selectedParentCode && !selectedParentInPage,
-// })
-
-// const selectedParentData = selectedParentResponse?.data
+// });
 
 
 

@@ -8,6 +8,10 @@ export interface Agent {
   phone: string
   type: string // "enseignant", "surveillant", "sécurité", "administration"
   status: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+  deleted_at?: string | null
   first_login?: boolean
   date_naissance?: string
   sexe?: string

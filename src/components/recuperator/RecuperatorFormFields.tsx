@@ -101,8 +101,8 @@ const readyToRenderParentSelect = !!parentLoaded || isReadOnly
     <FormItem>
       <FormLabel>Parent *</FormLabel>
       <Select
-        onValueChange={field.onChange}
-        value={field.value?.toString()}
+        value={field.value || undefined} // ⚠️ Jamais string vide
+        onValueChange={(value) => field.onChange(value)}
         disabled={isReadOnly}
       >
         <FormControl>
@@ -110,87 +110,48 @@ const readyToRenderParentSelect = !!parentLoaded || isReadOnly
             <SelectValue placeholder="Sélectionner un parent" />
           </SelectTrigger>
         </FormControl>
-   <SelectContent>
-  <div className="p-2">
-    <Input
-      placeholder="Rechercher un parent..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      className="mb-2"
-      disabled={isReadOnly}
-    />
-  </div>
 
-  {!field.value && (
-    <SelectItem value="" disabled>
-      -- Sélectionner un parent --
-    </SelectItem>
-  )}
-{/* {selectedParentData?.data?.code === field.value && (
-  <SelectItem value={selectedParentData.data.code}>
-    {selectedParentData.data.prenom} {selectedParentData.data.nom} - {selectedParentData.data.email}
-  </SelectItem>
-)} */}
+        <SelectContent>
+          {/* 🔍 Champ de recherche */}
+          <div className="p-2">
+            <Input
+              placeholder="Rechercher un parent..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="mb-2"
+              disabled={isReadOnly}
+            />
+          </div>
 
-{/* {selectedParentData?.data?.code === field.value && (
-  <SelectItem value={selectedParentData.data.code}>
-    {selectedParentData.data.prenom} {selectedParentData.data.nom} - {selectedParentData.data.email}
-  </SelectItem>
-)} */}
+          {/* ✅ Liste des parents paginés */}
+          {parents.map((parent) =>
+            parent.code ? (
+              <SelectItem key={`parent-${parent.code}`} value={parent.code}>
+                {parent.prenom} {parent.nom} - {parent.email}
+              </SelectItem>
+            ) : null
+          )}
 
-{/* ✅ Ajout du parent sélectionné s’il n’est pas dans la liste paginée */}
-{/* {selectedParentData &&
-  !parents.some((p) => p.code === selectedParentData.code) &&
-  selectedParentData.code === field.value && (
-    // <SelectItem key={`extra-${selectedParentData.code}`} value={selectedParentData.code}>
-    //   {selectedParentData.prenom} {selectedParentData.nom} - {selectedParentData.email}
-    // </SelectItem>
-    <SelectItem value={selectedParentData.code}>
-  {selectedParentData.prenom} {selectedParentData.nom} - {selectedParentData.email}
-</SelectItem>
-
-)} */}
-
-
- {/* ✅ Si le parent sélectionné n’est pas dans la liste paginée, on l’ajoute */}
-{/* {selectedParentData &&
-  !parents.some((p) => p.code === selectedParentData.code) && (
-    <SelectItem
-      key={`extra-${selectedParentData.code}`}
-      value={selectedParentData.code}
-    >
-      {selectedParentData.prenom} {selectedParentData.nom} - {selectedParentData.email}
-    </SelectItem>
-)}
- */}
-
-  {/* 🔁 Parents paginés */}
-{parents.map((parent) => (
-  // <SelectItem key={`parent-${parent.code}`} value={parent.code}>
-  //   {parent.prenom} {parent.nom} - {parent.email}
-  // </SelectItem>
-  <SelectItem key={`parent-${parent.code}`} value={parent.code}>
-  <div>{parent.prenom} {parent.nom} - {parent.email}</div>
-</SelectItem>
-
-))}
-
-{/* Pour le parent non paginé */}
-{selectedParentData &&
-  !parents.some((p) => p.code === selectedParentData.code) &&
-  selectedParentData.code === field.value && (
-    <SelectItem key={`extra-${selectedParentData.code}`} value={selectedParentData.code}>
-      <div>{selectedParentData.prenom} {selectedParentData.nom} - {selectedParentData.email}</div>
-    </SelectItem>
-)}
-
-</SelectContent>
-
+          {/* ✅ Si on est en édition, ajoute manuellement le parent sélectionné s'il n'est pas dans la pagination */}
+          {selectedParentData &&
+            selectedParentData.code &&
+            !parents.some((p) => p.code === selectedParentData.code) &&
+            selectedParentData.code === field.value && (
+              <SelectItem
+                key={`extra-${selectedParentData.code}`}
+                value={selectedParentData.code}
+              >
+                {selectedParentData.prenom} {selectedParentData.nom} -{" "}
+                {selectedParentData.email}
+              </SelectItem>
+            )}
+        </SelectContent>
       </Select>
       <FormMessage />
     </FormItem>
   )}
 />
+
 
 
       

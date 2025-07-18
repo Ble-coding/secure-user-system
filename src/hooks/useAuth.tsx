@@ -45,7 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // On force un rôle générique si non défini côté API
       const userWithRole: User = {
         ...userData,
-        role: userData.roles?.[0] || 'user',
+         role: userData.roles?.[0]?.name || 'user',
+
       }
       setUser(userWithRole)
     } catch (error) {
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userWithRole: User = {
         ...response.user,
-        role: response.user.roles?.[0] || 'user',
+       role: response.user.roles?.[0]?.name || 'user',
       }
 
       setUser(userWithRole)

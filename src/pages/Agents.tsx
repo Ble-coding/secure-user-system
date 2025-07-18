@@ -359,10 +359,16 @@ export default function Agents() {
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(agent)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
+                          {!agent.deleted_at && (
+                            <>
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(agent)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}  
+ 
                           <DropdownMenuSeparator />
                           {agent.status === "Hors Service" ? (
                             <DropdownMenuItem onClick={() => handleRestore(agent)}>

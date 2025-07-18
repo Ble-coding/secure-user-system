@@ -1,16 +1,32 @@
 
+import { useEffect } from "react"
+import { useAuth } from "@/hooks/useAuth"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
-import { Bell, Search } from "lucide-react"
+import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { BASE_URL } from "@/lib/api/config"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+ const { user } = useAuth()
+ 
+
+    // Fonction pour déterminer le rôle affiché
+ const getUserRole = () => {
+    if (!user) return "Utilisateur"
+   const roleName = user.roles?.[0]?.name
+    return roleName === 'superadmin'
+      ? 'Super Administrateur'
+      : roleName === 'admin'
+      ? 'Administrateur'
+      : 'Utilisateur'
+  }
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -41,14 +57,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 
                 <div className="flex items-center gap-3">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src="/placeholder-user.jpg" />
+                    <AvatarImage src={user?.photo ? `${BASE_URL}/storage/${user.photo}` : undefined} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      AD
+                      {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block">
-                    <p className="text-sm font-medium text-foreground">Admin User</p>
-                    <p className="text-xs text-muted-foreground">Administrateur</p>
+                   <p className="text-sm font-medium text-foreground">{user?.name || 'Utilisateur'}</p>
+                    <p className="text-xs text-muted-foreground"> {getUserRole()}</p>
                   </div>
                 </div>
               </div>

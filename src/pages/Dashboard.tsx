@@ -1,4 +1,3 @@
-
 import { StatsCard } from "@/components/StatsCard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,14 +13,25 @@ import {
   Activity,
   Clock,
   AlertCircle,
+  CheckCircle,
+  XCircle,
   Plus
 } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
+import { dashboardService } from "@/lib/api/dashboard"
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['dashboard-overview'],
+    queryFn: () => dashboardService.getOverview(),
+  })
 
-  const recentActivities = [
+  const overview = dashboardData?.data
+
+
+    const recentActivities = [
     { id: 1, action: "Nouveau parent enregistré", user: "Marie Dupont", time: "Il y a 5 min", status: "success" },
     { id: 2, action: "QR Code scanné", user: "Jean Martin", time: "Il y a 12 min", status: "info" },
     { id: 3, action: "Récupération enfant", user: "Sophie Bernard", time: "Il y a 20 min", status: "success" },
@@ -29,12 +39,42 @@ export default function Dashboard() {
     { id: 5, action: "Nouvel agent ajouté", user: "Pierre Moreau", time: "Il y a 1h", status: "info" },
   ]
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "success": return "bg-success text-success-foreground"
-      case "warning": return "bg-warning text-warning-foreground"
-      case "info": return "bg-info text-info-foreground"
-      default: return "bg-muted text-muted-foreground"
+  
+  const getActivityIcon = (type: string) => {
+    return type === 'entry' ? CheckCircle : XCircle
+  }
+
+  const getActivityColor = (type: string) => {
+    return type === 'entry' ? 'text-green-600' : 'text-orange-600'
+  }
+
+  const getStatusBadgeColor = (type: string) => {
+    return type === 'entry' ? 'bg-success text-success-foreground' : 'bg-muted text-muted-foreground'
+  }
+
+  // const getStatusBadgeColor = (status: string) => {
+  //   switch (status) {
+  //     case "success": return "bg-success text-success-foreground"
+  //     case "warning": return "bg-warning text-warning-foreground"
+  //     case "info": return "bg-info text-info-foreground"
+  //     default: return "bg-muted text-muted-foreground"
+  //   }
+
+  
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 60) {
+      return `Il y a ${diffInMinutes} min`
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60)
+      return `Il y a ${hours}h`
+    } else {
+      const days = Math.floor(diffInMinutes / 1440)
+      return `Il y a ${days}j`
     }
   }
 
@@ -51,7 +91,7 @@ export default function Dashboard() {
             <Calendar className="w-4 h-4 mr-2" />
             Aujourd'hui
           </Button>
-          <Button size="sm" className="bg-gradient-primary">
+          <Button size="sm">
             <TrendingUp className="w-4 h-4 mr-2" />
             Générer rapport
           </Button>
@@ -62,35 +102,35 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Utilisateurs"
-          value="1,247"
+          value={isLoading ? "..." : overview?.total_users || 0}
           description="Tous les utilisateurs"
           icon={Users}
           trend={{ value: 12, isPositive: true }}
         />
         <StatsCard
           title="Agents Actifs"
-          value="23"
+          value={isLoading ? "..." : overview?.active_agents || 0}
           description="En service"
           icon={UserCheck}
           trend={{ value: 8, isPositive: true }}
         />
         <StatsCard
           title="Parents Enregistrés"
-          value="892"
+          value={isLoading ? "..." : overview?.registered_parents || 0}
           description="Dans le système"
           icon={Users2}
           trend={{ value: 15, isPositive: true }}
         />
         <StatsCard
           title="Récupérations Jour"
-          value="156"
+          value={isLoading ? "..." : overview?.today_recoveries || 0}
           description="Aujourd'hui"
           icon={Heart}
           trend={{ value: 5, isPositive: false }}
         />
       </div>
 
-      {/* Main Content Grid */}
+     {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent Activities */}
         <Card className="lg:col-span-2">
@@ -105,26 +145,40 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary"></div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground">{activity.user}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className={getStatusColor(activity.status)}>
-                      {activity.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {activity.time}
-                    </span>
-                  </div>
-                </div>
-              ))}
+               {isLoading ? (
+                          <div className="text-center py-4 text-muted-foreground">Chargement...</div>
+                        ) : overview?.recent_activities?.length ? (
+                          overview.recent_activities.map((activity) => {
+                            const IconComponent = getActivityIcon(activity.type)
+                            return (
+                              <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                  <div>
+                                    <p className="text-sm font-medium text-foreground">
+                                      {activity.status}
+                                      {activity.recuperator && ` - ${activity.recuperator.full_name}`}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {activity.recuperator?.code || 'Sans récupérateur'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className={getStatusBadgeColor(activity.type)}>
+                                    {activity.status}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {formatTimeAgo(activity.scanned_at)}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <div className="text-center py-4 text-muted-foreground">Aucune activité récente</div>
+                        )}
             </div>
           </CardContent>
         </Card>
@@ -193,21 +247,29 @@ export default function Dashboard() {
         </Card>
       </div>
 
+
       {/* Additional Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Enfants dans le système
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">1,456</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-success">+7%</span> par rapport au mois dernier
-            </p>
-          </CardContent>
-        </Card>
+  <CardHeader className="pb-2">
+    <CardTitle className="text-sm font-medium text-muted-foreground">
+      Enfants dans le système
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="text-2xl font-bold text-foreground">
+      {overview?.children_count ?? 0}
+    </div>
+    <p className="text-xs text-muted-foreground">
+      <span className={overview?.children_trend?.isPositive ? "text-success" : "text-destructive"}>
+        {overview?.children_trend?.isPositive ? "+" : "-"}
+        {overview?.children_trend?.value ?? 0}%
+      </span>{" "}
+      par rapport au mois dernier
+    </p>
+  </CardContent>
+</Card>
+
 
         <Card>
           <CardHeader className="pb-2">
@@ -216,7 +278,9 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">234</div>
+            <div className="text-2xl font-bold text-foreground">
+              {isLoading ? "..." : overview?.qr_scans_week || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               Cette semaine
             </p>
@@ -230,7 +294,9 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">98.5%</div>
+            <div className="text-2xl font-bold text-foreground">
+              {isLoading ? "..." : `${overview?.success_rate || 0}%`}
+            </div>
             <p className="text-xs text-muted-foreground">
               Récupérations réussies
             </p>

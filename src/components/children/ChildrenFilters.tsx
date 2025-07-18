@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Filter, ArrowDown, ArrowUp, Users, GraduationCap } from "lucide-react"
+import { Search, Filter, ArrowDown, ArrowUp, Users, GraduationCap, UserCheck } from "lucide-react"
 
 interface ChildrenFiltersProps {
   searchTerm: string
@@ -19,6 +19,8 @@ interface ChildrenFiltersProps {
   setGenderFilter: (value: "all" | "M" | "F") => void
   classFilter: string
   setClassFilter: (value: string) => void
+  parentCodeFilter: string
+  setParentCodeFilter: (value: string) => void
 }
 
 export function ChildrenFilters({
@@ -29,7 +31,9 @@ export function ChildrenFilters({
   genderFilter,
   setGenderFilter,
   classFilter,
-  setClassFilter
+  setClassFilter,
+  parentCodeFilter,
+  setParentCodeFilter
 }: ChildrenFiltersProps) {
   return (
     <div className="flex items-center gap-4 mb-6 flex-wrap">
@@ -40,6 +44,16 @@ export function ChildrenFilters({
           className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      <div className="relative">
+        <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Input 
+          placeholder="Code parent..." 
+          className="pl-10 w-36"
+          value={parentCodeFilter}
+          onChange={(e) => setParentCodeFilter(e.target.value)}
         />
       </div>
 

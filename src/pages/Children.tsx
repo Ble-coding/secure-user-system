@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 // import { childService, ChildWithRelations } from "@/lib/api"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {childService} from "@/lib/api/children"
 import { ChildWithRelations } from "@/lib/api/children"
-import { useQuery } from "@tanstack/react-query"
 import { useToast } from "@/hooks/use-toast"
 import { ChildrenStats } from "@/components/children/ChildrenStats"
 import { ChildrenFilters } from "@/components/children/ChildrenFilters"
@@ -17,10 +17,13 @@ export default function Children() {
   const [entryFilter, setEntryFilter] = useState<"all" | "entry" | "exit">("all")
   const [genderFilter, setGenderFilter] = useState<"all" | "M" | "F">("all")
   const [classFilter, setClassFilter] = useState("")
+    const [parentCodeFilter, setParentCodeFilter] = useState("")
   const [selectedChild, setSelectedChild] = useState<ChildWithRelations | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   const { toast } = useToast()
+    const queryClient = useQueryClient()
+
 
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['children-with-relations', page, searchTerm],
@@ -37,7 +40,7 @@ export default function Children() {
     total: response?.data?.total ?? 0,
   }
 
-  const filteredChildren = children.filter((child: ChildWithRelations) => {
+ const filteredChildren = children.filter((child: ChildWithRelations) => {
     // Filter by activity status
     if (entryFilter !== "all") {
       const lastActivity = child.last_activities?.[0]
@@ -55,12 +58,36 @@ export default function Children() {
       return false
     }
 
+    // Filter by parent code
+    if (parentCodeFilter && child.parent?.code && !child.parent.code.toLowerCase().includes(parentCodeFilter.toLowerCase())) {
+      return false
+    }
+
     return true
   })
 
   const handleViewDetails = (child: ChildWithRelations) => {
     setSelectedChild(child)
     setIsDetailModalOpen(true)
+  }
+
+    const handleRestore = async (child: ChildWithRelations) => {
+    try {
+      await childService.restore(child.code)
+      toast({
+        title: "Succès",
+        description: `L'enfant ${child.first_name} ${child.last_name} a été restauré avec succès.`,
+      })
+      // Refresh the data
+      queryClient.invalidateQueries({ queryKey: ['children-with-relations'] })
+    } catch (error) {
+      console.error('Erreur lors de la restauration:', error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la restauration de l'enfant.",
+        variant: "destructive",
+      })
+    }
   }
 
   // if (isLoading) {
@@ -101,7 +128,7 @@ export default function Children() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChildrenFilters
+      <ChildrenFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             entryFilter={entryFilter}
@@ -110,11 +137,14 @@ export default function Children() {
             setGenderFilter={setGenderFilter}
             classFilter={classFilter}
             setClassFilter={setClassFilter}
+            parentCodeFilter={parentCodeFilter}
+            setParentCodeFilter={setParentCodeFilter}
           />
 
           <ChildrenTable
             children={filteredChildren}
             onViewDetails={handleViewDetails}
+            onRestore={handleRestore}
           />
 
           <ChildrenPagination

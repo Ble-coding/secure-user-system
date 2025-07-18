@@ -1,5 +1,7 @@
 
 import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
+import { BASE_URL } from "@/lib/api/config"
 import { 
   BarChart3, 
   Users, 
@@ -57,11 +59,25 @@ const settingsItems = [
 ]
 
 export function AppSidebar() {
+   const { user } = useAuth()
   const { state } = useSidebar()
   const location = useLocation()
   const currentPath = location.pathname
   const collapsed = state === "collapsed"
   const [searchTerm, setSearchTerm] = useState("")
+
+
+  
+    // Fonction pour déterminer le rôle affiché
+ const getUserRole = () => {
+    if (!user) return "Utilisateur"
+   const roleName = user.roles?.[0]?.name
+    return roleName === 'superadmin'
+      ? 'Super Administrateur'
+      : roleName === 'admin'
+      ? 'Administrateur'
+      : 'Utilisateur'
+  }
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -184,14 +200,14 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="flex items-center gap-3 mb-3">
             <Avatar className="w-8 h-8">
-              <AvatarImage src="/placeholder-user.jpg" />
+                      <AvatarImage src={user?.photo ? `${BASE_URL}/storage/${user.photo}` : undefined} />
               <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                AD
+                  {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
-              <p className="text-xs text-sidebar-foreground/70 truncate">admin@example.com</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || 'Utilisateur'}</p>
+              <p className="text-xs text-sidebar-foreground/70 truncate">{getUserRole()}</p>
             </div>
           </div>
         )}

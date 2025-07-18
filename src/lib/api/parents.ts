@@ -10,6 +10,28 @@ export const parentService = {
       `/users/parents?page=${page}&search=${encodeURIComponent(search)}&status=${status}`
     ),
 
+
+       getParentsSelect: (page = 1, search = "") =>
+  apiRequest<ApiResponse<PaginatedParentResponse>>(
+    `/users/parents/parents-select-all?page=${page}&search=${encodeURIComponent(search)}`
+  ),
+
+
+getParentByCode: async (code: string): Promise<ParentUser> => {
+  const response = await apiRequest<ApiResponse<ParentUser>>(
+    `/users/parents/${code}`,
+    {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
+    }
+  )
+  return response.data 
+    // return response.data.data
+},
+
+
   // 🔎 Récupérer un parent par son code (et non id)
   getByCode: (code: string) =>
     apiRequest<ApiResponse<ParentUser>>(`/users/parents/${encodeURIComponent(code)}`),
@@ -44,7 +66,7 @@ export const parentService = {
     apiRequest<ApiResponse<null>>(`/users/parents/${encodeURIComponent(code)}`, {
       method: 'DELETE',
     }),
-
+ 
 
   // ♻️ Restaurer un parent supprimé (soft deleted)
   restore: (code: string) =>

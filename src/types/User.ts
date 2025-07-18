@@ -1,10 +1,17 @@
+export interface Role {
+  id: number
+  name: string
+  label?: string | null
+}
+
 export interface User {
   id: number
   name: string
   email: string
-  role: string
-  status: string
+  phone?: string
+  photo?: string
+  roles: Role[]
   last_login?: string
-    phone?: string      // ✅ Ajouté
-  photo?: string   
+  created_at?: string
+  updated_at?: string
 }

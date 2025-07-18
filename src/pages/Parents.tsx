@@ -344,10 +344,16 @@ const parents = response?.data?.parents ?? []
                             <Eye className="mr-2 h-4 w-4" />
                             Voir les détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(parent)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
+           
+                          {!parent.deleted_at && (
+  <>
+    <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(parent)}>
+      <Edit className="mr-2 h-4 w-4" />
+      Modifier
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+  </>
+)}
                           <DropdownMenuSeparator />
                           {parent.status === "Inactif" ? (
                             <DropdownMenuItem className="cursor-pointer" onClick={() => handleRestore(parent)}>

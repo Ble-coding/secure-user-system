@@ -121,10 +121,15 @@ const getRelationBadge = (relation: string) => {
                       <Eye className="mr-2 h-4 w-4" />
                       Voir les détails
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => onEdit(recuperator)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Modifier
-                    </DropdownMenuItem>
+          {!recuperator.deleted_at && (
+  <>
+    <DropdownMenuItem className="cursor-pointer" onClick={() => onEdit(recuperator)}>
+      <Edit className="mr-2 h-4 w-4" />
+      Modifier
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+  </>
+)}
                     <DropdownMenuSeparator />
                     {recuperator.deleted_at ? (
                       <DropdownMenuItem onClick={() => onRestore(recuperator)}>
